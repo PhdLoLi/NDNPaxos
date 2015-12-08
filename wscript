@@ -24,6 +24,7 @@ def options(opt):
     
     opt.add_option('-d', '--debug', dest='debug', default=False, action='store_true')
     opt.add_option('-l', '--log', dest="log", default='', help='log level', action='store')
+    opt.add_option('-m', '--mode', dest="mode", default='', help='mode type', action='store')
 
 def configure(conf):
     conf.env['CXX'] = "clang++"
@@ -33,6 +34,7 @@ def configure(conf):
     _enable_pic(conf)
     _enable_debug(conf)     #debug
     _enable_log(conf)       #log level
+    _enable_mode(conf)      #mode type 
     _enable_static(conf)    #static
     _enable_cxx11(conf)
 
@@ -53,14 +55,21 @@ def configure(conf):
 
 def build(bld):
 
-#   os.system('protoc -I=libppaxos --python_out=script libppaxos/ppaxos.proto')
+#   os.system('protoc -I=libndnpaxos --python_out=script libndnpaxos/ndnpaxos.proto')
+
+    bld.stlib(source=bld.path.ant_glob(['libndnpaxos/view.cpp' 
+                                       ]), 
+              target="ndnpaxos",
+              includes="libndnpaxos",
+              use="NDN_CXX YAML-CPP",
+              install_path="${PREFIX}/lib")
 
     for app in bld.path.ant_glob('examples/*.cpp'):
         bld(features=['cxx', 'cxxprogram'],
             source = app,
             target = '%s' % (str(app.change_ext('','.cpp'))),
-#            includes="libppaxos libzfec", 
-            use="NDN_CXX",
+            includes="libndnpaxos", 
+            use="ndnpaxos",
             ) 
 
 def _enable_debug(conf):
@@ -96,6 +105,24 @@ def _enable_log(conf):
     else:
         Logs.pprint("PINK", "unsupported log level")
 #    if os.getenv("DEBUG") == "1":
+
+def _enable_mode(conf):
+    if Options.options.mode == 'RS':
+        Logs.pprint("PINK", "Mode type set to RS")
+        conf.env.append_value("CFLAGS", "-DMODE_TYPE=1")
+        conf.env.append_value("CXXFLAGS", "-DMODE_TYPE=1")
+    elif Options.options.mode == 'E':
+        Logs.pprint("PINK", "Mode type set to Epaxos")
+        conf.env.append_value("CFLAGS", "-DMODE_TYPE=2")
+        conf.env.append_value("CXXFLAGS", "-DMODE_TYPE=2")
+    elif Options.options.mode == 'RSII':
+        Logs.pprint("PINK", "Mode type set to RSII")
+        conf.env.append_value("CFLAGS", "-DMODE_TYPE=3")
+        conf.env.append_value("CXXFLAGS", "-DMODE_TYPE=3")
+    elif Options.options.mode == '':
+        pass
+    else:
+        Logs.pprint("PINK", "unsupported Mode type")
 
 def _enable_static(conf):
     if os.getenv("STATIC") == "1":

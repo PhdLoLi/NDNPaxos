@@ -1,5 +1,5 @@
-/* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 /**
+ * Created on Dec 06, 2015
  * @author Lijing Wang OoOfreedom@gmail.com
  */
 
@@ -12,7 +12,7 @@ namespace examples {
 class Consumer {
  public:
    void run() {
-     Name name("/ndn/thu/paxos/node1/prepare");
+     Name name("/ndn/thu/paxos/prepare");
      name.appendNumber(0).appendNumber(1); // slot_id
      Interest interest(name);
      interest.setInterestLifetime(time::milliseconds(1000));
@@ -32,7 +32,8 @@ class Consumer {
      std::string value_str(value, value + size);
      std::cout << "value_str: " << value_str << std::endl;
      std::cout << "value_size: " << size << std::endl;
-     std::cout << data << std::endl;
+     std::cout << "interest name: " << interest.getName() << std::endl;
+     std::cout << "data name: " << data.getName() << std::endl;
    }
  
    void onTimeout(const Interest& interest) {
