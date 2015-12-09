@@ -4,6 +4,7 @@
  */
 
 #include <ndn-cxx/face.hpp>
+#include "view.hpp"
 
 namespace ndn {
 
@@ -12,8 +13,18 @@ namespace examples {
 class Consumer {
  public:
    void run() {
-     Name name("/ndn/thu/paxos/prepare");
+     int node_num = 3;
+     std::string config_file = "config/localhost-" + to_string(node_num) + ".yaml";
+     int my_id = 1;
+   
+     // init view for one captain
+     ndnpaxos::View view(my_id, config_file);
+     view.print_host_nodes();
+
+     Name name(view.prefix());
+     name.append(std::to_string(0)).append(std::to_string(ndnpaxos::PREPARE));
      name.appendNumber(0).appendNumber(1); // slot_id
+
      Interest interest(name);
      interest.setInterestLifetime(time::milliseconds(1000));
      interest.setMustBeFresh(true);

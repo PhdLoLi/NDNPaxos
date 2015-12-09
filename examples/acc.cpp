@@ -23,7 +23,9 @@ class Producer {
      ndnpaxos::View view(my_id, config_file);
      view.print_host_nodes();
 
-     m_face.setInterestFilter("/ndn/thu/paxos",
+     Name prefix(view.prefix());
+     prefix.append(std::to_string(view.whoami()));
+     m_face.setInterestFilter(prefix,
                               bind(&Producer::onInterest, this, _1, _2),
                               RegisterPrefixSuccessCallback(),
                               bind(&Producer::onRegisterFailed, this, _1, _2));
@@ -40,7 +42,7 @@ class Producer {
 
      int ballot_id = dataName.get(-1).toNumber();
      int slot_id = dataName.get(-2).toNumber();
-     std::string msg_type = dataName.get(-3).toUri();
+     ndnpaxos::MsgType msg_type = ndnpaxos::MsgType(std::stoi(dataName.get(-3).toUri()));
 //     std::string node_id = dataName.get(-4).toUri();
      
 //     std::cout << "node_id: " << node_id << std::endl;
@@ -49,8 +51,8 @@ class Producer {
      std::cout << "ballot_id: " << ballot_id << std::endl;
 
      dataName
-       .append(m_nodeName) // add node_name component to Interest name
-       .append("true") // add "reply" component to Interest name
+//       .append(m_nodeName) // add node_name component to Interest name
+       .append("T") // add "reply" component to Interest name
        .appendNumber(2); // add "max_ballot_id" component to Interest name
 //       .appendVersion();  // add "version" component (current UNIX timestamp in milliseconds)
  

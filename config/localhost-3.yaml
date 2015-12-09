@@ -1,3 +1,4 @@
+prefix: /ndn/thu/paxos 
 host:
   - name: node1
     addr: localhost
