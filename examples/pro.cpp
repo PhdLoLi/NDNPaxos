@@ -23,7 +23,7 @@ class Consumer {
 
      Name name(view.prefix());
      name.append(std::to_string(0)).append(std::to_string(ndnpaxos::PREPARE));
-     name.appendNumber(0).appendNumber(1); // slot_id
+     name.appendNumber(0).appendNumber((1 << 16) + 1); // slot_id
 
      Interest interest(name);
      interest.setInterestLifetime(time::milliseconds(1000));
@@ -45,6 +45,12 @@ class Consumer {
      std::cout << "value_size: " << size << std::endl;
      std::cout << "interest name: " << interest.getName() << std::endl;
      std::cout << "data name: " << data.getName() << std::endl;
+     ndnpaxos::value_id_t value_id = data.getName().get(-3).toNumber();
+     if (size > 0) {
+       LOG_INFO("Has data, value_id is %llu", value_id);
+     } else {
+       LOG_INFO("Has no data!");
+     }
    }
  
    void onTimeout(const Interest& interest) {

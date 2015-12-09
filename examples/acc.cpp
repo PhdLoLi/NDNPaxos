@@ -40,20 +40,23 @@ class Producer {
      // Create new name, based on Interest's name
      Name dataName(interest.getName());
 
-     int ballot_id = dataName.get(-1).toNumber();
-     int slot_id = dataName.get(-2).toNumber();
+     ndnpaxos::ballot_id_t ballot_id = dataName.get(-1).toNumber();
+     ndnpaxos::slot_id_t slot_id = dataName.get(-2).toNumber();
      ndnpaxos::MsgType msg_type = ndnpaxos::MsgType(std::stoi(dataName.get(-3).toUri()));
+     ndnpaxos::node_id_t node_id = std::stoi(dataName.get(-4).toUri());
 //     std::string node_id = dataName.get(-4).toUri();
      
-//     std::cout << "node_id: " << node_id << std::endl;
-     std::cout << "msg_type: " << msg_type << std::endl;
+     std::cout << "node_id: " << node_id << std::endl;
+     std::cout << "msg_type: " << ndnpaxos::msg_type_str[msg_type] << std::endl;
      std::cout << "slot_id: " << slot_id << std::endl;
      std::cout << "ballot_id: " << ballot_id << std::endl;
 
+     ndnpaxos::value_id_t value_id = (1 << 16) + 2;
      dataName
 //       .append(m_nodeName) // add node_name component to Interest name
-       .append("T") // add "reply" component to Interest name
-       .appendNumber(2); // add "max_ballot_id" component to Interest name
+       .appendNumber(value_id)
+       .appendNumber(2) // add "max_ballot_id" component to Interest name
+       .append("T"); // add "reply" component to Interest name
 //       .appendVersion();  // add "version" component (current UNIX timestamp in milliseconds)
  
      static const std::string content = "HELLO KITTY";

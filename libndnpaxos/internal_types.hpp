@@ -137,6 +137,10 @@ struct PropValue {
   };
 };
 
+const std::string msg_type_str[] = {"PREPARE", "PROMISE", "ACCEPT", "ACCEPTED", 
+                              "DECIDE", "LEARN", "TEACH", 
+                              "COMMIT", "COMMAND"};
+
 using callback_t = std::function<void(slot_id_t, std::string&)>;
 using callback_full_t = std::function<void(slot_id_t, PropValue&, node_id_t)>;
 using callback_latency_t = std::function<void(slot_id_t, PropValue&, int)>;
