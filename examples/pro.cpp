@@ -6,27 +6,25 @@
 #include <ndn-cxx/face.hpp>
 #include "view.hpp"
 
-namespace ndn {
-
-namespace examples {
+namespace ndnpaxos {
 
 class Consumer {
  public:
    void run() {
      int node_num = 3;
-     std::string config_file = "config/localhost-" + to_string(node_num) + ".yaml";
+     std::string config_file = "config/localhost-" + std::to_string(node_num) + ".yaml";
      int my_id = 1;
    
      // init view for one captain
-     ndnpaxos::View view(my_id, config_file);
+     View view(my_id, config_file);
      view.print_host_nodes();
 
-     Name name(view.prefix());
-     name.append(std::to_string(0)).append(std::to_string(ndnpaxos::PREPARE));
+     ndn::Name name(view.prefix());
+     name.append(std::to_string(0)).append(std::to_string(PREPARE));
      name.appendNumber(0).appendNumber((1 << 16) + 1); // slot_id
 
-     Interest interest(name);
-     interest.setInterestLifetime(time::milliseconds(1000));
+     ndn::Interest interest(name);
+     interest.setInterestLifetime(ndn::time::milliseconds(1000));
      interest.setMustBeFresh(true);
      m_face.expressInterest(interest,
                             bind(&Consumer::onData, this,  _1, _2),
@@ -37,7 +35,7 @@ class Consumer {
   }
 
  private:
-   void onData(const Interest& interest, const Data& data) {
+   void onData(const ndn::Interest& interest, const ndn::Data& data) {
      const uint8_t* value = data.getContent().value();
      size_t size = data.getContent().value_size();
      std::string value_str(value, value + size);
@@ -45,7 +43,7 @@ class Consumer {
      std::cout << "value_size: " << size << std::endl;
      std::cout << "interest name: " << interest.getName() << std::endl;
      std::cout << "data name: " << data.getName() << std::endl;
-     ndnpaxos::value_id_t value_id = data.getName().get(-3).toNumber();
+     value_id_t value_id = data.getName().get(-3).toNumber();
      if (size > 0) {
        LOG_INFO("Has data, value_id is %llu", value_id);
      } else {
@@ -53,19 +51,18 @@ class Consumer {
      }
    }
  
-   void onTimeout(const Interest& interest) {
+   void onTimeout(const ndn::Interest& interest) {
      std::cout << "Timeout " << interest << std::endl;
    }
 
  private:
-   Face m_face;
+   ndn::Face m_face;
 };
 
-} // namespace examples
-} // namespace ndn
+} // namespace ndnpaxos
 
 int main(int argc, char** argv) {
-  ndn::examples::Consumer consumer;
+  ndnpaxos::Consumer consumer;
   try {
     consumer.run();
   }
