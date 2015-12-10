@@ -41,6 +41,7 @@ void Commo::waiting_msg() {
 // acceptors receive interest need to deal with message 
 void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
   std::string msg_str = interest.getName().get(-1).toUri();
+  deal_msg(msg_str);
 }
 
 void Commo::onRegisterFailed(const ndn::Name& prefix, const std::string& reason) {

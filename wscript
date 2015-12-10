@@ -73,6 +73,14 @@ def build(bld):
             use="ndnpaxos",
             ) 
 
+    for app in bld.path.ant_glob('test/*.cpp'):
+        bld(features=['cxx', 'cxxprogram'],
+            source = app,
+            target = '%s' % (str(app.change_ext('','.cpp'))),
+            includes="libndnpaxos", 
+            use="ndnpaxos",
+            ) 
+
 def _enable_debug(conf):
     if Options.options.debug:
         Logs.pprint("PINK", "Debug support enabled")
