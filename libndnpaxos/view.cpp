@@ -1,7 +1,8 @@
-/*
+/**
  * Created on: Dec 08, 2015
  * @Author: Lijing OoOfreedom@gmail.com
  */
+
 #include "view.hpp"
 
 namespace ndnpaxos {

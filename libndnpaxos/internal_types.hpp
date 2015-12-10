@@ -8,6 +8,7 @@
 #include <mutex>
 #include <chrono>
 #include <string>
+#include "ndnpaxos.pb.h"
 
 namespace ndnpaxos {
 
@@ -84,18 +85,6 @@ namespace ndnpaxos {
 #define LOG_INFO_COM(...) 
 #endif
 
-enum MsgType {
-  PREPARE = 0,
-  PROMISE = 1,
-  ACCEPT = 2,
-  ACCEPTED = 3,
-  DECIDE = 4,
-  LEARN = 5,
-  TEACH = 6,
-  COMMIT = 7,
-  COMMAND = 8
-};
-
 enum AckType {
   DROP = 0,
   NOT_ENOUGH = 1,
@@ -127,15 +116,6 @@ using node_id_t = uint16_t;
 using slot_id_t = uint64_t;
 using ballot_id_t = uint64_t;
 using value_id_t = uint64_t;
-
-struct PropValue {
-  value_id_t id;
-  std::string data;
-  PropValue() {};
-  PropValue(value_id_t init_id, std::string init_data)
-    : id(init_id), data(init_data) {
-  };
-};
 
 const std::string msg_type_str[] = {"PREPARE", "PROMISE", "ACCEPT", "ACCEPTED", 
                               "DECIDE", "LEARN", "TEACH", 
