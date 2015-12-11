@@ -62,14 +62,14 @@ def build(bld):
                                         'libzfec/fec.cc']), 
               target="ndnpaxos",
               includes="libndnpaxos libzfec",
-              use="NDN_CXX PROTOBUF YAML-CPP",
+              use="BOOST NDN_CXX PROTOBUF YAML-CPP",
               install_path="${PREFIX}/lib")
 
     for app in bld.path.ant_glob('examples/*.cpp'):
         bld(features=['cxx', 'cxxprogram'],
             source = app,
             target = '%s' % (str(app.change_ext('','.cpp'))),
-            includes="libndnpaxos", 
+            includes="libndnpaxos libzfec", 
             use="ndnpaxos",
             ) 
 

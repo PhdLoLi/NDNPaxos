@@ -148,13 +148,11 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
 }
 
 // now only use Intersts to exchange info, so there is no need to deal with data
-void Commo::onData(const ndn::Interest& interest, const ndn::Data& data)
-{
+void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
 //  std::cout << data << std::endl;
 }
 
-void Commo::onTimeout(const ndn::Interest& interest)
-{
+void Commo::onTimeout(const ndn::Interest& interest) {
   // Do nothing or need to retransmit??
   //std::cout << "Timeout " << interest << std::endl;
 }
