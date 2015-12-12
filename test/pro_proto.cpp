@@ -66,19 +66,19 @@ class Consumer {
   }
 
  private:
-   void onData(const ndn::Interest& interest, const ndn::Data& data) {
-     const uint8_t* value = data.getContent().value();
-     size_t size = data.getContent().value_size();
-     std::string value_str(value, value + size);
-     std::cout << "value_str: " << value_str << std::endl;
-     std::cout << "value_size: " << size << std::endl;
-     std::cout << "interest name: " << interest.getName() << std::endl;
-     std::cout << "data name: " << data.getName() << std::endl;
-   }
- 
-   void onTimeout(const ndn::Interest& interest) {
-     std::cout << "Timeout " << interest << std::endl;
-   }
+  void onData(const ndn::Interest& interest, const ndn::Data& data) {
+    const uint8_t* value = data.getContent().value();
+    size_t size = data.getContent().value_size();
+    std::string value_str(value, value + size);
+    std::cout << "value_str: " << value_str << std::endl;
+    std::cout << "value_size: " << size << std::endl;
+    std::cout << "interest name: " << interest.getName() << std::endl;
+    std::cout << "data name: " << data.getName() << std::endl;
+  }
+
+  void onTimeout(const ndn::Interest& interest) {
+    std::cout << "Timeout " << interest << std::endl;
+  }
 
  private:
    ndn::Face m_face;

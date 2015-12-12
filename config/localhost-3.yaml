@@ -1,10 +1,10 @@
 prefix: /ndn/thu/paxos 
 host:
+  - name: node0
+    addr: localhost
   - name: node1
     addr: localhost
   - name: node2
-    addr: localhost
-  - name: node3
     addr: localhost
 lease:
   master_id: 0

@@ -1,6 +1,6 @@
 prefix: /ndn/thu/paxos 
 host:
-  - name: node1
+  - name: node0
     addr: localhost
 lease:
   master_id: 0

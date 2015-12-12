@@ -38,9 +38,11 @@ View::View(node_id_t node_id, std::string cf)
     // set a node in view
     std::string local_host("localhost");
     if (addr.compare(local_host) != 0) {
-      LOG_INFO("nfdc register %s/%d tcp://%s", prefix_.c_str(), node_id, addr.c_str());
+      LOG_INFO("nfdc register %s/%s tcp://%s", 
+               prefix_.c_str(), name.c_str(), addr.c_str());
     } else {
-      LOG_INFO("no need to nfdc register %s/%d tcp://localhost", prefix_.c_str(), node_id);
+      LOG_INFO("no need to nfdc register %s/%s tcp://localhost", 
+               prefix_.c_str(), name.c_str());
     }
 
     host_info_t host_info = host_info_t(name, addr);
