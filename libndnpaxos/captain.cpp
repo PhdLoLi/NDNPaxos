@@ -4,8 +4,8 @@
  * Date: 5/5/2015
  */
 
-#include "captain.hpp"
 #include "commo.hpp"
+#include "captain.hpp"
 #include <iostream>
 #include <chrono>
 #include <unistd.h>

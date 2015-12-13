@@ -57,7 +57,8 @@ def build(bld):
 
 #    os.system('protoc -I=libndnpaxos --python_out=script libndnpaxos/ndnpaxos.proto')
 
-    bld.stlib(source=bld.path.ant_glob(['libndnpaxos/view.cpp', 'libndnpaxos/ndnpaxos.proto' 
+    bld.stlib(source=bld.path.ant_glob(['libndnpaxos/view.cpp', 'libndnpaxos/ndnpaxos.proto',
+                                        'libndnpaxos/proposer.cpp', 'libndnpaxos/acceptor.cpp', 
                                         'libndnpaxos/captain.cpp', 'libndnpaxos/commo.cpp', 
                                         'libndnpaxos/producer.cpp', 'libndnpaxos/consumer.cpp',
                                         'libndnpaxos/*.proto',
