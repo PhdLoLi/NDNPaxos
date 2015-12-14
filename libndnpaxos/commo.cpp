@@ -7,14 +7,15 @@
 #include "captain.hpp"
 #include <iostream>
 #include "threadpool.hpp" 
-
-namespace ndnpaxos {
+#include <boost/thread/mutex.hpp>
+#include <boost/bind.hpp>
 
 using namespace boost::threadpool;
-Commo::Commo(Captain *captain, View &view) 
-  : view_(&view) {
+namespace ndnpaxos {
 
-  face_ = ndn::make_shared<ndn::Face>();
+Commo::Commo(Captain *captain, View &view) 
+  : captain_(captain), view_(&view) {
+
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
@@ -26,7 +27,7 @@ Commo::Commo(Captain *captain, View &view)
     LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
 
-  face_->setInterestFilter(consumer_names_[view_->whoami()],
+  face_.setInterestFilter(consumer_names_[view_->whoami()],
                         bind(&Commo::onInterest, this, _1, _2),
                         ndn::RegisterPrefixSuccessCallback(),
                         bind(&Commo::onRegisterFailed, this, _1, _2));
@@ -39,8 +40,8 @@ Commo::~Commo() {
 
 void Commo::start() {
   LOG_INFO("processEvents attached!");
-  face_->processEvents();
-//  face_->getIoService().run();
+  face_.processEvents();
+//  face_.getIoService().run();
   LOG_INFO("processEvents attach Finished?!");
 } 
 
@@ -99,20 +100,20 @@ void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& i
   size_t size = request.value_size();
   std::string msg_str(value, value + size);
 
-  static const std::string content = "HELLO KITTY";
-
-  // Create Data packet
-  ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
-  data->setName(dataName);
-  data->setFreshnessPeriod(ndn::time::seconds(10));
-  data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
-
-  // Sign Data packet with default identity
-  keyChain_.sign(*data);
-
-  // Return Data packet to the requester
-//  std::cout << ">> D: " << *data << std::endl;
-  face_->put(*data);
+//  static const std::string content = "HELLO KITTY";
+//
+//  // Create Data packet
+//  ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
+//  data->setName(dataName);
+//  data->setFreshnessPeriod(ndn::time::seconds(10));
+//  data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
+//
+//  // Sign Data packet with default identity
+//  keyChain_.sign(*data);
+//
+//  // Return Data packet to the requester
+////  std::cout << ">> D: " << *data << std::endl;
+//  face_.put(*data);
 
   deal_msg(msg_str);
 }
@@ -121,7 +122,7 @@ void Commo::onRegisterFailed(const ndn::Name& prefix, const std::string& reason)
   std::cerr << "ERROR: Failed to register prefix \""
             << prefix << "\" in local hub's daemon (" << reason << ")"
             << std::endl;
-  face_->shutdown();
+  face_.shutdown();
 }
 
 void Commo::deal_msg(std::string msg_str) {
@@ -181,12 +182,12 @@ void Commo::consume(ndn::Name name) {
   ndn::Interest interest(name);
   interest.setInterestLifetime(ndn::time::milliseconds(1000));
   interest.setMustBeFresh(true);
-  face_->expressInterest(interest,
+  face_.expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1));
   LOG_TRACE_COM("Consumer Sending %s", interest.getName().toUri().c_str());
   // processEvents will block until the requested data received or timeout occurs
-//  face_->processEvents();
+//  face_.processEvents();
 }
 
 void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {

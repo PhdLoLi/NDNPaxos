@@ -23,10 +23,10 @@ class Commo {
   void broadcast_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t);
   void set_pool(pool *);
-  void start();
 
  private:
   // for producer part
+  void start();
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
   void onRegisterFailed(const ndn::Name& prefix, const std::string& reason);
 
@@ -37,13 +37,12 @@ class Commo {
 
   void deal_msg(std::string msg_str); 
 
-  View *view_;
   Captain *captain_;
+  View *view_;
   pool *pool_;
 
   // for NDN
-  ndn::shared_ptr<ndn::Face> face_;
-//  ndn::Face face_;
+  ndn::Face face_;
   std::vector<ndn::Name> consumer_names_;
   ndn::KeyChain keyChain_;
 
