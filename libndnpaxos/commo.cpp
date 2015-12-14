@@ -12,9 +12,12 @@ namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view) 
   : view_(&view) {
-  producer_ = new Producer(ndn::Name(view_->prefix()).
-                          append(view_->hostname()), captain);
-  con_ = new Consumer();
+
+//  ndn::shared_ptr<ndn::Face> face = ndn::make_shared<ndn::Face>();
+  ndn::shared_ptr<ndn::Face> face = ndn::shared_ptr<ndn::Face>(new ndn::Face);
+  producer_ = new Producer(ndn::Name(view_->prefix()).append(view_->hostname()),
+                          captain, face);
+  con_ = new Consumer(face);
 
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
@@ -38,7 +41,7 @@ void Commo::set_pool(pool *pl) {
 }
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
-
+ 
   std::string msg_str;
   msg->SerializeToString(&msg_str);
   msg_str.append(std::to_string(msg_type));
