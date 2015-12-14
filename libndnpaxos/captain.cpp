@@ -21,6 +21,7 @@ Captain::Captain(View &view, callback_t& callback)
     work_(true) {
 
   commo_ = new Commo(this, view);
+//  boost::thread listen(boost::bind(&Commo::start, this));
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 }
@@ -34,6 +35,7 @@ Captain::Captain(View &view, int window_size)
     work_(true) {
 
   commo_ = new Commo(this, view);
+//  boost::thread listen(boost::bind(&Commo::start, this));
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 }
