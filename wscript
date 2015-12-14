@@ -80,7 +80,7 @@ def build(bld):
         bld(features=['cxx', 'cxxprogram'],
             source = app,
             target = '%s' % (str(app.change_ext('','.cpp'))),
-            includes="libndnpaxos", 
+            includes="libndnpaxos libzfec", 
             use="ndnpaxos",
             ) 
 

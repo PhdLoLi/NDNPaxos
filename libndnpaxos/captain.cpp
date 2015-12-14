@@ -12,6 +12,19 @@
 
 namespace ndnpaxos {
 
+// no thread pool
+Captain::Captain(View &view, callback_t& callback)
+  : view_(&view), 
+    max_chosen_(0), max_chosen_without_hole_(0), max_slot_(0),
+    value_id_(view_->whoami()), window_size_(1),
+    callback_(callback), callback_full_(NULL), callback_latency_(NULL), 
+    work_(true) {
+
+  commo_ = new Commo(this, view);
+  chosen_values_.push_back(NULL);
+  acceptors_.push_back(NULL);
+}
+
 // now using this 
 Captain::Captain(View &view, int window_size)
   : view_(&view), 

@@ -35,6 +35,7 @@ class Captain {
  public:
 
   Captain(View &view, int window_size);
+  Captain(View &, callback_t&);
 
   ~Captain();
 
