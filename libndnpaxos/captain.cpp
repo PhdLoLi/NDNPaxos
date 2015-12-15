@@ -20,8 +20,7 @@ Captain::Captain(View &view, callback_t& callback)
     callback_(callback), callback_full_(NULL), callback_latency_(NULL), 
     work_(true) {
 
-  commo_ = new Commo(this, view);
-//  boost::thread listen(boost::bind(&Commo::start, this));
+//  commo_ = new Commo(this, view);
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 }
@@ -34,8 +33,7 @@ Captain::Captain(View &view, int window_size)
     callback_(NULL), callback_full_(NULL), callback_latency_(NULL), 
     work_(true) {
 
-  commo_ = new Commo(this, view);
-//  boost::thread listen(boost::bind(&Commo::start, this));
+//  commo_ = new Commo(this, view);
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 }
@@ -80,6 +78,9 @@ void Captain::commit_recover() {
 void Captain::set_timer(int period, PropValue* prop_value) {
   usleep(period * 1000);
   value_id_t old_id = prop_value->id();
+  std::cout << "set_timer old_id: " << old_id << std::endl; 
+  std::cout << "commit_readys_[old_id]: " << commit_readys_[old_id] << std::endl;
+
   if(commit_readys_.find(old_id) != commit_readys_.end() && commit_readys_[old_id] == false) {
     // timeout occured! send a command annoucing I'm the new master
 
@@ -142,21 +143,26 @@ void Captain::commit(std::string& data) {
 //    std::cout << "Begin readys_size !!!!" << commit_readys_.size() << std::endl;
 
     MsgCommit *msg_com = msg_commit(prop_value);
-    commo_->send_one_msg(msg_com, COMMIT, view_->master_id());
-    boost::thread timer(boost::bind(&Captain::set_timer, this, view_->period(), prop_value));
+    // blocking style receive reply or timeout now no body call setFilter or run()
+    commit_readys_[id] = false;
+    commo_->send_one_msg(msg_com, COMMIT, view_->master_id(), msg_com, COMMIT);
+//    boost::thread timer(boost::bind(&Captain::set_timer, this, view_->period(), prop_value));
+  
+
+    std::cout << "before waiting!!!!" << std::endl;
     {
       boost::unique_lock<boost::mutex> lock(commit_mutexs_[id]);
-      commit_readys_[id] = false;
       while(!commit_readys_[id]) {
         commit_conds_[id].wait(lock);
       }
     }
 
-//    std::cout << "Here!!!!" << std::endl;
+    std::cout << "After waiting!!!!" << std::endl;
     commit_mutexs_.erase(id);
     commit_conds_.erase(id);
     commit_readys_.erase(id);
   }
+  LOG_DEBUG_CAP("commit over!!!");
 }
 
 void Captain::commit(PropValue* prop_value) {
@@ -383,7 +389,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (msg_pre->msg_header().node_id() == view_->whoami())
         handle_msg(msg_ack_pre, PROMISE);
       else // receiver should reply to PROMISE
-        commo_->send_one_msg(msg_ack_pre, PROMISE, msg_pre->msg_header().node_id());
+        commo_->send_one_msg(msg_ack_pre, PROMISE, msg_pre->msg_header().node_id(), msg, msg_type);
 
       break;
     }
@@ -441,7 +447,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
             if (i == view_->whoami()) 
               handle_msg(msg_acc, ACCEPT);
             else // like broadcast should set ACCEPT as send[i]
-              commo_->send_one_msg(msg_acc, ACCEPT, i);
+              commo_->send_one_msg(msg_acc, ACCEPT, i, msg, msg_type);
          }
 #else
           MsgAccept *msg_acc = proposers_[slot_id]->curr_proposer->msg_accept();
@@ -496,7 +502,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (msg_acc->msg_header().node_id() == view_->whoami())
         handle_msg(msg_ack_acc, ACCEPTED);
       else 
-        commo_->send_one_msg(msg_ack_acc, ACCEPTED, msg_acc->msg_header().node_id());
+        commo_->send_one_msg(msg_ack_acc, ACCEPTED, msg_acc->msg_header().node_id(), msg, msg_type);
 
       break;
     } 
@@ -512,7 +518,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       proposers_mutex_.lock();
 
       if (proposers_.find(slot_id) == proposers_.end()) {
-        LOG_TRACE_CAP("(msg_type):PROMISE,proposers don't have this (slot_id):%llu Return!", slot_id);
+        LOG_TRACE_CAP("(msg_type):ACCEPTED,proposers don't have this (slot_id):%llu Return!", slot_id);
         proposers_mutex_.unlock();
         return;
       }
@@ -684,7 +690,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       } else {
         // acceptors_[dec_slot] doesn't contain such value, need learn from this sender
         MsgLearn *msg_lea = msg_learn(dec_slot);
-        commo_->send_one_msg(msg_lea, LEARN, msg_dec->msg_header().node_id());
+        commo_->send_one_msg(msg_lea, LEARN, msg_dec->msg_header().node_id(), msg, msg_type);
       } 
       break;
     }
@@ -706,7 +712,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
 #else
       MsgTeach *msg_tea = msg_teach(lea_slot);
 #endif
-      commo_->send_one_msg(msg_tea, TEACH, msg_lea->msg_header().node_id());
+      commo_->send_one_msg(msg_tea, TEACH, msg_lea->msg_header().node_id(), msg, msg_type);
       break;
     }
 
@@ -735,19 +741,22 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (view_->if_master()) {
         LOG_INFO_CAP("%s(msg_type):COMMIT from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_com->msg_header().node_id(), view_->whoami());
-        commo_->send_one_msg(msg_com, COMMIT, msg_com->msg_header().node_id());
+        commo_->send_one_msg(msg_com, COMMIT, msg_com->msg_header().node_id(), msg, msg_type);
         commit(msg_com->mutable_prop_value());
       } else {
         value_id_t id = msg_com->mutable_prop_value()->id();
         LOG_DEBUG_CAP("%s(msg_type):Reply_COMMIT from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_com->msg_header().node_id(), view_->whoami());
-//        std::cout << "I received reply of committing id: " << id << std::endl; 
+        std::cout << "I received reply of committing id: " << id << std::endl; 
         {
           boost::lock_guard<boost::mutex> lock(commit_mutexs_[id]);
           commit_readys_[id] = true;
         }
         commit_conds_[id].notify_one();
-//        std::cout << "I notify " << id << std::endl; 
+        std::cout << "I notify " << id << std::endl; 
+        std::cout << "commit_readys_[id]: " << commit_readys_[id] << std::endl;
+//        commo_->stop();
+//        commo_->start();
       }
 
 

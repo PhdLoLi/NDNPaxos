@@ -4,7 +4,10 @@
  */
 
 #include "view.hpp"
+#include "commo.hpp"
 #include "captain.hpp"
+
+#include <boost/bind.hpp>
 #include <fstream>
 #include <boost/filesystem.hpp>
 #include <chrono>
@@ -114,6 +117,10 @@ static void sig_int(int num) {
   exit(num);
 }  
 
+void commit_thread(std::string &value) {
+  captain->commit(value);
+} 
+
 int main(int argc, char** argv) {
   signal(SIGINT, sig_int);
  
@@ -155,10 +162,14 @@ int main(int argc, char** argv) {
   captain->set_callback(callback);
   captain->set_callback(callback_full);
 
+  Commo* commo = new Commo(captain, view);
+  captain->set_commo(commo);
 
   control_sig = 1;
 
   start = std::chrono::high_resolution_clock::now();
+
+//  boost::thread listen(boost::bind(&Commo::start, commo));
 
   for (int i = 0; i < win_size * 1; i++) {
     counter_mut.lock();
@@ -167,18 +178,23 @@ int main(int argc, char** argv) {
     counter_mut.unlock();
     std::string value = "Commiting Value Time_" + std::to_string(commit_counter) + " from " + view.hostname();
     LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
-    captain->commit(value);
+    boost::thread committing(commit_thread, value);
+//    captain->commit(value);
 
 //    LOG_INFO("***********************************************************************");
   }
 
+  commo->start();
 
-  LOG_INFO("I'm sleeping");
 
-  sleep(100000);
+  LOG_INFO("I'm sleeping for 10000");
+  sleep(10000);
+  LOG_INFO("Master ALL DONE!");
 
   return 0;
 }
+
+
 
 } // namespace ndnpaxos
 

@@ -8,7 +8,7 @@ host:
     addr: localhost
 lease:
   master_id: 0
-  period: 500
+  period: 1000
 rs:
   x: 3
   n: 3

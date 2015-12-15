@@ -4,6 +4,7 @@
  */
 
 #include "view.hpp"
+#include "commo.hpp"
 #include "captain.hpp"
 #include <fstream>
 #include <boost/filesystem.hpp>
@@ -70,10 +71,14 @@ int main(int argc, char** argv) {
   // init one specific captain
 
   Captain captain(view, callback);
+  Commo* commo = new Commo(&captain, view);
+  captain.set_commo(commo);
+  commo->start();
 
 
   LOG_INFO("I'm sleeping for 10000");
   sleep(10000);
+  LOG_INFO("ALL DONE!");
 
   return 0;
 }
