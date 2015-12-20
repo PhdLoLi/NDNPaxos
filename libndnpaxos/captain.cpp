@@ -75,15 +75,10 @@ void Captain::set_commo(Commo *commo) {
 void Captain::commit_recover() {
 }
 
-void Captain::set_timer(int period, PropValue* prop_value) {
-  usleep(period * 1000);
-  value_id_t old_id = prop_value->id();
-  std::cout << "set_timer old_id: " << old_id << std::endl; 
-  std::cout << "commit_readys_[old_id]: " << commit_readys_[old_id] << std::endl;
-
-  if(commit_readys_.find(old_id) != commit_readys_.end() && commit_readys_[old_id] == false) {
-    // timeout occured! send a command annoucing I'm the new master
-
+void Captain::master_change(PropValue* prop_value) {
+  if(view_->if_master()) {
+    commit(prop_value);
+  } else {
     LOG_INFO_CAP("the original master:%u does not respond, start changing to:%u", view_->master_id(), view_->whoami());
     PropValue *prop_cmd = new PropValue();
     prop_cmd->set_cmd_type(SET_MASTER);
@@ -95,33 +90,10 @@ void Captain::set_timer(int period, PropValue* prop_value) {
 
     std::string command = "set_master Time_" + std::to_string(id >> 16) + " from " + view_->hostname();
     prop_cmd->set_data(command);
-    commit(prop_cmd);
-    // start waiting until being notified
-//    LOG_INFO_CAP("Start Waiting");
-    {
-      boost::unique_lock<boost::mutex> lock(commit_mutexs_[id]);
-      commit_readys_[id] = false;
-      while(!commit_readys_[id]) {
-        commit_conds_[id].wait(lock);
-      }
-    }
-
-//    LOG_INFO_CAP("Waiting Over");
-
-    commit_mutexs_.erase(id);
-    commit_conds_.erase(id);
-    commit_readys_.erase(id);
-    
-    // changing OK, commit true value and notify the blocking 
-//    LOG_INFO_CAP("recommit");
+    proposers_mutex_.lock();
+    tocommit_values_.push(prop_cmd);
+    proposers_mutex_.unlock();
     commit(prop_value);
-//    LOG_INFO_CAP("recommit over");
-
-    {
-      boost::lock_guard<boost::mutex> lock(commit_mutexs_[old_id]);
-      commit_readys_[old_id] = true;
-    }
-    commit_conds_[old_id].notify_one();
   }
 }
 
@@ -138,29 +110,13 @@ void Captain::commit(std::string& data) {
   if (view_->if_master()) {
     commit(prop_value);
   } else {
-//    std::cout << "Begin mutexs_size !!!!" << commit_mutexs_.size() << std::endl;
-//    std::cout << "Begin conds_size !!!!" << commit_conds_.size() << std::endl;
-//    std::cout << "Begin readys_size !!!!" << commit_readys_.size() << std::endl;
 
     MsgCommit *msg_com = msg_commit(prop_value);
     // blocking style receive reply or timeout now no body call setFilter or run()
-    commit_readys_[id] = false;
+//    servant_mutex_.lock();
+//    servant_values_[id] = prop_value;
+//    servant_mutex_.unlock();
     commo_->send_one_msg(msg_com, COMMIT, view_->master_id(), msg_com, COMMIT);
-//    boost::thread timer(boost::bind(&Captain::set_timer, this, view_->period(), prop_value));
-  
-
-    std::cout << "before waiting!!!!" << std::endl;
-    {
-      boost::unique_lock<boost::mutex> lock(commit_mutexs_[id]);
-      while(!commit_readys_[id]) {
-        commit_conds_[id].wait(lock);
-      }
-    }
-
-    std::cout << "After waiting!!!!" << std::endl;
-    commit_mutexs_.erase(id);
-    commit_conds_.erase(id);
-    commit_readys_.erase(id);
   }
   LOG_DEBUG_CAP("commit over!!!");
 }
@@ -748,15 +704,10 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
         LOG_DEBUG_CAP("%s(msg_type):Reply_COMMIT from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_com->msg_header().node_id(), view_->whoami());
         std::cout << "I received reply of committing id: " << id << std::endl; 
-        {
-          boost::lock_guard<boost::mutex> lock(commit_mutexs_[id]);
-          commit_readys_[id] = true;
-        }
-        commit_conds_[id].notify_one();
-        std::cout << "I notify " << id << std::endl; 
-        std::cout << "commit_readys_[id]: " << commit_readys_[id] << std::endl;
-//        commo_->stop();
-//        commo_->start();
+//        servant_mutex_.lock();
+//        servant_values_.erase(id);
+//        servant_mutex_.unlock();
+//        std::cout << "I delete " << id << "from servant_mutex_" << std::endl; 
       }
 
 
@@ -971,12 +922,8 @@ void Captain::add_callback() {
           node_id_t node_id = (node_id_t)prop_value->id();
           view_->set_master(node_id);
           LOG_INFO_CAP("master_id changed from %u to %u", old_master, view_->master_id());
-          if (node_id == view_->whoami()) {
-            value_id_t id = prop_value->id();
-            boost::lock_guard<boost::mutex> lock(commit_mutexs_[id]);
-            commit_readys_[id] = true;
-            commit_conds_[id].notify_one();
-          }
+//          if (node_id == view_->whoami()) {
+//          }
           break;
         }
       }

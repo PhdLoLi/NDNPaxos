@@ -9,11 +9,11 @@
 #include "acceptor.hpp"
 #include <queue>
 #include <unordered_map>
-#include "threadpool.hpp" 
-//#include "ThreadPool.h"
+#include <boost/thread/mutex.hpp>
+//#include "threadpool.hpp" 
 #include <map>
 //#include "include_all.h"
-using namespace boost::threadpool;
+//using namespace boost::threadpool;
 namespace ndnpaxos {
 // This module is responsible for locating the correct proposer and
 // acceptor for a certain instance (an instance is identified by slot_id). 
@@ -171,7 +171,7 @@ class Captain {
 
   void add_callback();
 
-  void set_timer(int, PropValue *);
+  void master_change(PropValue *);
 
  private:
 
@@ -202,7 +202,7 @@ class Captain {
   callback_latency_t callback_latency_;
 
   // pool no use now
-  pool *pool_;
+//  pool *pool_;
 
   // tag work 
   bool work_;
@@ -210,15 +210,14 @@ class Captain {
   boost::mutex max_chosen_mutex_;
   boost::mutex value_id_mutex_;
 
-  boost::mutex tocommit_values_mutex_;
+//  boost::mutex tocommit_values_mutex_;
   boost::mutex acceptors_mutex_;
   boost::mutex proposers_mutex_;
 
   boost::mutex work_mutex_;
 
-  std::map<value_id_t, boost::mutex> commit_mutexs_;
-  std::map<value_id_t, boost::condition_variable> commit_conds_;
-  std::map<value_id_t, bool> commit_readys_;
+//  std::map<value_id_t, PropValue *> servant_values_;
+//  boost::mutex servant_mutex_;
 
 };
 

@@ -15,14 +15,14 @@
 namespace ndnpaxos {
 class View;
 class Captain;
-class pool;
+//class pool;
 class Commo {
  public:
   Commo(Captain *captain, View &view);
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, google::protobuf::Message *, MsgType);
-  void set_pool(pool *);
+//  void set_pool(pool *);
   void start();
   void stop();
   ndn::shared_ptr<ndn::Face> getFace();
@@ -35,14 +35,15 @@ class Commo {
 
   // for consumer part
   void onData(const ndn::Interest& interest, const ndn::Data& data); 
-  void onTimeout(const ndn::Interest& interest);
+  void onTimeout(const ndn::Interest& interest, int& resendTimes);
   void consume(ndn::Name name);
 
   void deal_msg(std::string &msg_str); 
+  void deal_timeout(std::string &msg_str); 
 
   Captain *captain_;
   View *view_;
-  pool *pool_;
+//  pool *pool_;
 
   // for NDN
   ndn::shared_ptr<ndn::Face> face_;

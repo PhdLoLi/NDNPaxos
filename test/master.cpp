@@ -178,8 +178,8 @@ int main(int argc, char** argv) {
     counter_mut.unlock();
     std::string value = "Commiting Value Time_" + std::to_string(commit_counter) + " from " + view.hostname();
     LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
-    boost::thread committing(commit_thread, value);
-//    captain->commit(value);
+//    boost::thread committing(commit_thread, value);
+    captain->commit(value);
 
 //    LOG_INFO("***********************************************************************");
   }

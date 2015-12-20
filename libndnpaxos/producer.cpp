@@ -132,7 +132,6 @@ void Producer::deal_msg(std::string msg_str) {
   std::string text_str;
   google::protobuf::TextFormat::PrintToString(*msg, &text_str);
   LOG_TRACE_COM("Producer Received %s", text_str.c_str());
-//    pool_->schedule(boost::bind(&Captain::handle_msg, captain_, msg, static_cast<MsgType>(type)));
   captain_->handle_msg(msg, static_cast<MsgType>(type));
   LOG_TRACE_COM("Producer Handle finish!");
 }

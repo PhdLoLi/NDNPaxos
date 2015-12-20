@@ -6,11 +6,11 @@
 #include "commo.hpp"
 #include "captain.hpp"
 #include <iostream>
-#include "threadpool.hpp" 
+//#include "threadpool.hpp" 
 #include <boost/thread/mutex.hpp>
 #include <boost/bind.hpp>
 
-using namespace boost::threadpool;
+//using namespace boost::threadpool;
 namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view) 
@@ -29,6 +29,11 @@ Commo::Commo(Captain *captain, View &view)
     LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
 
+  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
+  face_->setInterestFilter(consumer_names_[view_->whoami()],
+                        bind(&Commo::onInterest, this, _1, _2),
+                        ndn::RegisterPrefixSuccessCallback(),
+                        bind(&Commo::onRegisterFailed, this, _1, _2));
 //  boost::thread listen(boost::bind(&Commo::start, this));
 }
 
@@ -36,11 +41,6 @@ Commo::~Commo() {
 }
 
 void Commo::start() {
-  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
-  face_->setInterestFilter(consumer_names_[view_->whoami()],
-                        bind(&Commo::onInterest, this, _1, _2),
-                        ndn::RegisterPrefixSuccessCallback(),
-                        bind(&Commo::onRegisterFailed, this, _1, _2));
   LOG_INFO("processEvents attached!");
 //  face_->processEvents();
   face_->getIoService().run();
@@ -48,9 +48,9 @@ void Commo::start() {
 } 
 
 //void Commo::set_pool(ThreadPool *pool) {
-void Commo::set_pool(pool *pl) {
-  pool_ = pl;
-}
+//void Commo::set_pool(pool *pl) {
+//  pool_ = pl;
+//}
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
  
@@ -71,10 +71,10 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
 
     LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
     // need to change to multithread
-    if (msg_type == PREPARE)
-      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-                             bind(&Commo::consume, this, new_name));
-    else 
+//    if (msg_type == PREPARE)
+//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+//                             bind(&Commo::consume, this, new_name));
+//    else 
       consume(new_name);
 
     LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s finished", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
@@ -122,13 +122,12 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
     new_name.append(message);
   //  scheduler_->scheduleEvent(ndn::time::milliseconds(0),
   //                           bind(&Commo::consume, this, new_name));
-    if (msg_type == COMMIT) {
-      //face_->getIoService().run();
-      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-                               bind(&Commo::consume, this, new_name));
-    } else {
+//    if (msg_type == COMMIT) {
+//      //face_->getIoService().run();
+//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+//                               bind(&Commo::consume, this, new_name));
+//    } else 
       consume(new_name);
-    }
   }
 }
 
@@ -136,8 +135,6 @@ void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& i
   LOG_DEBUG_COM("<< Producer I: %s", interest.getName().toUri().c_str());
 
   // Create new name, based on Interest's name
-  ndn::Name dataName(interest.getName());
-
   ndn::name::Component request = interest.getName().get(-1);
   const uint8_t* value = request.value();
   size_t size = request.value_size();
@@ -201,18 +198,33 @@ void Commo::deal_msg(std::string &msg_str) {
   std::string text_str;
   google::protobuf::TextFormat::PrintToString(*msg, &text_str);
   LOG_TRACE_COM("deal_msg Received %s", text_str.c_str());
-//    pool_->schedule(boost::bind(&Captain::handle_msg, captain_, msg, static_cast<MsgType>(type)));
   captain_->handle_msg(msg, static_cast<MsgType>(type));
   LOG_TRACE_COM("deal_msg Handle finish!");
 }
 
+void Commo::deal_timeout(std::string &msg_str) {
+//  std::string msg_str(static_cast<char*>(request.data()), request.size());
+  int type = int(msg_str.back() - '0');
+//    LOG_DEBUG_COM("type %d", type);
+  if(type == COMMIT) {
+    MsgCommit *msg_com = new MsgCommit();
+    msg_str.pop_back();
+    msg_com->ParseFromString(msg_str);
+    std::string text_str;
+    google::protobuf::TextFormat::PrintToString(*msg_com, &text_str);
+    LOG_TRACE_COM("deal_timeout Received %s", text_str.c_str());
+    captain_->master_change(msg_com->mutable_prop_value());
+    LOG_TRACE_COM("deal_timeout Handle finish!");
+  }
+}
+
 void Commo::consume(ndn::Name name) {
   ndn::Interest interest(name);
-  interest.setInterestLifetime(ndn::time::milliseconds(1000));
+  interest.setInterestLifetime(ndn::time::milliseconds(4000));
   interest.setMustBeFresh(true);
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
-                         bind(&Commo::onTimeout, this, _1));
+                         bind(&Commo::onTimeout, this, _1, 0));
   LOG_TRACE_COM("Consumer Sending %s", interest.getName().toUri().c_str());
 }
 
@@ -224,11 +236,21 @@ void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
   deal_msg(value_str);
 }
 
-void Commo::onTimeout(const ndn::Interest& interest) {
-  LOG_DEBUG_COM("Consumer Timeout %s", interest.getName().toUri().c_str());
-//  face_->expressInterest(interest,
-//                         bind(&Commo::onData, this,  _1, _2),
-//                         bind(&Commo::onTimeout, this, _1));
+void Commo::onTimeout(const ndn::Interest& interest, int& resendTimes) {
+  LOG_DEBUG_COM("Consumer Timeout %s, count %d", interest.getName().toUri().c_str(), resendTimes);
+  
+  if (resendTimes < MAX_TIMEOUT) {
+    face_->expressInterest(interest,
+                           bind(&Commo::onData, this,  _1, _2),
+                           bind(&Commo::onTimeout, this, _1, resendTimes + 1));
+  } else {
+    ndn::name::Component request = interest.getName().get(-1);
+    const uint8_t* value = request.value();
+    size_t size = request.value_size();
+    std::string msg_str(value, value + size);
+  
+    deal_timeout(msg_str);
+  }
 
 }
 
