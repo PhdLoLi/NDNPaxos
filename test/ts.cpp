@@ -3,6 +3,7 @@
  * @author Lijing Wang OoOfreedom@gmail.com
  */
 
+#include <ndn-cxx/interest.hpp>
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
@@ -18,13 +19,15 @@ public:
     face_ = ndn::make_shared<ndn::Face>();
     face_->setInterestFilter(ndn::Name("ndn/thu/paxos").append(node_name_),
                              bind(&TS::onInterest, this, _1, _2),
-                             ndn::RegisterPrefixSuccessCallback(),
+                             [] (const ndn::InterestFilter& filter) {
+                               std::cout << "Registered filter: " << filter << std::endl;
+                             },
                              bind(&TS::onRegisterFailed, this, _1, _2));
   }
 
   void start() {
     std::cout << "processEvents attached!" << std::endl;
-  //  face_->processEvents();
+    //  face_->processEvents();
     face_->getIoService().run();
     std::cout << "processEvents Finished?!" << std::endl;
   }
@@ -34,16 +37,18 @@ public:
     interest.setInterestLifetime(ndn::time::milliseconds(1000));
     interest.setMustBeFresh(true);
     face_->expressInterest(interest,
-                           bind(&TS::onData, this,  _1, _2),
-                           bind(&TS::onTimeout, this, _1, 0));
-    std::cout << "Consumer Sending I " << interest.getName() << std::endl;
+                           std::bind(&TS::onData, this,  _1, _2),
+                           std::bind(&TS::onTimeout, this, _1, 0));
+    std::cerr << "Consumer Sending I " << interest.getName() << std::endl;
   }
 
 private:
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
+    std::cerr << "GOT INTEREST: " << interest << std::endl;
+
     std::string cmd = interest.getName().get(-1).toUri();
 
-    std::cout << "Producer I: " << interest << std::endl;
+    std::cerr << "Producer I: " << interest << std::endl;
 
     static const std::string content = "Reply from" + node_name_;
 
@@ -55,7 +60,7 @@ private:
 
     keyChain_.sign(*data);
 
-    std::cout << "Producer D: " << *data << std::endl;
+    std::cerr << "Producer D: " << *data << std::endl;
     face_->put(*data);
 
     if (cmd.compare("COMMIT") == 0) {
@@ -73,26 +78,26 @@ private:
 
   
   void onData(const ndn::Interest& interest, const ndn::Data& data) {
+    std::cerr << "Consumer onData " << interest.getName().toUri() << std::endl;
 
     std::string cmd = interest.getName().get(-1).toUri();
 
-    std::cout << "Consumer onData " << interest.getName().toUri() << std::endl;
     if (cmd.compare("PREPARE") == 0) {
       consume(ndn::Name("ndn/thu/paxos/node1/ACCEPT"));
     } else if (cmd.compare("ACCEPT") == 0) {
       consume(ndn::Name("ndn/thu/paxos/node1/DECIDE"));
-    } 
+    }
   }
-  
+
   void onTimeout(const ndn::Interest& interest, int& resendTimes) {
-    std::cout << "Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes;
-    
-//    if (resendTimes < 3) {
-//      ndn::Interest interest_new(interest);
-//      face_->expressInterest(interest_new,
-//                             bind(&TS::onData, this,  _1, _2),
-//                             bind(&TS::onTimeout, this, _1, resendTimes + 1));
-//    }
+    std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
+
+    if (resendTimes < 3) {
+      ndn::Interest interest_new(interest);
+      face_->expressInterest(interest_new,
+                             bind(&TS::onData, this,  _1, _2),
+                             bind(&TS::onTimeout, this, _1, resendTimes + 1));
+    }
   }
 
 private:

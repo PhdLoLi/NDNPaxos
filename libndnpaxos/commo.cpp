@@ -14,7 +14,7 @@
 namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view) 
-  : captain_(captain), view_(&view) {
+  : captain_(captain), view_(&view), reg_ok_(false) {
 
   face_ = ndn::make_shared<ndn::Face>();
   scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
@@ -32,7 +32,7 @@ Commo::Commo(Captain *captain, View &view)
   LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
   face_->setInterestFilter(consumer_names_[view_->whoami()],
                         bind(&Commo::onInterest, this, _1, _2),
-                        ndn::RegisterPrefixSuccessCallback(),
+                        bind(&Commo::onRegisterSucceed, this, _1),
                         bind(&Commo::onRegisterFailed, this, _1, _2));
 //  boost::thread listen(boost::bind(&Commo::start, this));
 }
@@ -53,6 +53,10 @@ void Commo::start() {
 //}
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
+  
+  boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  while (!reg_ok_) reg_ok_cond_.wait(lock);
+
   std::string msg_str;
   msg->SerializeToString(&msg_str);
   msg_str.append(std::to_string(msg_type));
@@ -99,6 +103,9 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id) {
 //  std::cout << " --- Commo Send ONE to captain " << node_id << " MsgType: " << msg_type << std::endl;
+  boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  while (!reg_ok_) reg_ok_cond_.wait(lock);
+
   LOG_DEBUG_COM("Send ONE to --%s (msg_type):%s", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
   std::string msg_str;
@@ -111,11 +118,11 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
   new_name.append(message);
 //    scheduler_->scheduleEvent(ndn::time::milliseconds(0),
 //                             bind(&Commo::consume, this, new_name));
-//  if (msg_type == COMMIT) {
-//    //face_->getIoService().run();
-//    scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-//                             bind(&Commo::consume, this, new_name));
-//  } else 
+  if (msg_type == COMMIT) {
+    //face_->getIoService().run();
+    scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+                             bind(&Commo::consume, this, new_name));
+  } else 
     consume(new_name);
 }
 
@@ -141,6 +148,13 @@ void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& i
   std::string msg_str(value, value + size);
 
   deal_msg(msg_str, dataName);
+}
+
+void Commo::onRegisterSucceed(const ndn::InterestFilter& filter) {
+  std::cerr << "onRegisterSucceed! " << filter << std::endl;
+  boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  reg_ok_ = true;
+  reg_ok_cond_.notify_one();
 }
 
 void Commo::onRegisterFailed(const ndn::Name& prefix, const std::string& reason) {
@@ -220,7 +234,7 @@ void Commo::deal_timeout(std::string &msg_str) {
 
 void Commo::consume(ndn::Name name) {
   ndn::Interest interest(name);
-  interest.setInterestLifetime(ndn::time::milliseconds(4000));
+  interest.setInterestLifetime(ndn::time::milliseconds(1000));
   interest.setMustBeFresh(true);
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),

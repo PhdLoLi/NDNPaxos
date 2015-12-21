@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <algorithm>
+#include <thread>
 
 namespace ndnpaxos {
 
@@ -168,8 +169,11 @@ int main(int argc, char** argv) {
   control_sig = 1;
 
   start = std::chrono::high_resolution_clock::now();
+  
+  ndn::Scheduler scheduler(commo->getFace()->getIoService());
 
-//  boost::thread listen(boost::bind(&Commo::start, commo));
+  std::thread listen(bind(&Commo::start, commo));
+  sleep(1);
 
   for (int i = 0; i < win_size * 1; i++) {
     counter_mut.lock();
@@ -178,13 +182,22 @@ int main(int argc, char** argv) {
     counter_mut.unlock();
     std::string value = "Commiting Value Time_" + std::to_string(commit_counter) + " from " + view.hostname();
     LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
-//    boost::thread committing(commit_thread, value);
-    captain->commit(value);
+//    if (i == 0) {
+//      //scheduler.scheduleEvent(ndn::time::seconds(1),
+//      //                        bind(commit_thread, value));
+//
+////      scheduler.scheduleEvent(ndn::time::seconds(1), [&] {
+////        captain->commit(value);
+////      });
+//    }
+////    boost::thread committing(commit_thread, value);
+//    else 
+      captain->commit(value);
 
 //    LOG_INFO("***********************************************************************");
   }
 
-  commo->start();
+//  commo->start();
 
 
   LOG_INFO("I'm sleeping for 10000");

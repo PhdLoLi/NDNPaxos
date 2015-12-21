@@ -11,6 +11,8 @@
 #include "internal_types.hpp"
 #include <unistd.h>
 #include <google/protobuf/text_format.h>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition.hpp>
 
 namespace ndnpaxos {
 class View;
@@ -32,6 +34,7 @@ class Commo {
  private:
   // for producer part
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
+  void onRegisterSucceed(const ndn::InterestFilter& filter);
   void onRegisterFailed(const ndn::Name& prefix, const std::string& reason);
   void produce(std::string &str, ndn::Name&);
 
@@ -53,6 +56,8 @@ class Commo {
   std::vector<ndn::Name> consumer_names_;
   ndn::KeyChain keyChain_;
 
-
+  bool reg_ok_;
+  boost::mutex reg_ok_mutex_;
+  boost::condition_variable reg_ok_cond_;
 };
 } // namespace ndnpaxos
