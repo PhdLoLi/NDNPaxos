@@ -55,11 +55,11 @@ class Consumer {
      name.append(message);
 
      ndn::Interest interest(name);
-     interest.setInterestLifetime(ndn::time::milliseconds(1000));
+//     interest.setInterestLifetime(ndn::time::seconds(5));
      interest.setMustBeFresh(true);
      m_face.expressInterest(interest,
                             bind(&Consumer::onData, this,  _1, _2),
-                            bind(&Consumer::onTimeout, this, _1));
+                            bind(&Consumer::onTimeout, this, _1, 0));
      std::cout << "Sending " << interest << std::endl;
      // processEvents will block until the requested data received or timeout occurs
      m_face.processEvents();
@@ -76,8 +76,11 @@ class Consumer {
     std::cout << "data name: " << data.getName() << std::endl;
   }
 
-  void onTimeout(const ndn::Interest& interest) {
-    std::cout << "Timeout " << interest << std::endl;
+  void onTimeout(const ndn::Interest& interest, int& resendTimes) {
+    std::cout << "Timeout " << interest << " times: " << resendTimes << std::endl;
+    m_face.expressInterest(interest,
+                          bind(&Consumer::onData, this,  _1, _2),
+                          bind(&Consumer::onTimeout, this, _1, resendTimes + 1));
   }
 
  private:

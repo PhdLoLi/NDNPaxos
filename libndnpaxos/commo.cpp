@@ -53,7 +53,6 @@ void Commo::start() {
 //}
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
- 
   std::string msg_str;
   msg->SerializeToString(&msg_str);
   msg_str.append(std::to_string(msg_type));
@@ -70,11 +69,11 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
     new_name.append(message);
 
     LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
-    // need to change to multithread
-//    if (msg_type == PREPARE)
-//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-//                             bind(&Commo::consume, this, new_name));
-//    else 
+
+    if (msg_type == PREPARE)
+      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+                             bind(&Commo::consume, this, new_name));
+    else // ACCEPT DECIDE 
       consume(new_name);
 
     LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s finished", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());

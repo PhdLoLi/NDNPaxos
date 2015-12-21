@@ -21,6 +21,7 @@ class Commo {
   Commo(Captain *captain, View &view);
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
+  void send_one_msg(google::protobuf::Message *, MsgType, node_id_t);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, google::protobuf::Message *, MsgType);
 //  void set_pool(pool *);
   void start();
