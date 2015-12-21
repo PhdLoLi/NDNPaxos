@@ -87,12 +87,12 @@ private:
   void onTimeout(const ndn::Interest& interest, int& resendTimes) {
     std::cout << "Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes;
     
-    if (resendTimes < 3) {
-      ndn::Interest interest_new(interest);
-      face_->expressInterest(interest_new,
-                             bind(&TS::onData, this,  _1, _2),
-                             bind(&TS::onTimeout, this, _1, resendTimes + 1));
-    }
+//    if (resendTimes < 3) {
+//      ndn::Interest interest_new(interest);
+//      face_->expressInterest(interest_new,
+//                             bind(&TS::onData, this,  _1, _2),
+//                             bind(&TS::onTimeout, this, _1, resendTimes + 1));
+//    }
   }
 
 private:

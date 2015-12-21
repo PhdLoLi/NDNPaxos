@@ -7,6 +7,7 @@
 #pragma once
 #include "proposer.hpp"
 #include "acceptor.hpp"
+#include <ndn-cxx/face.hpp>
 #include <queue>
 #include <unordered_map>
 #include <boost/thread/mutex.hpp>
@@ -29,11 +30,11 @@ struct proposer_info_t {
   };
 };
 
-
 class Commo;
 class Captain {
  public:
 
+  static ndn::Name dumName_;
   Captain(View &view, int window_size);
   Captain(View &, callback_t&);
 
@@ -105,7 +106,7 @@ class Captain {
   /**
    * handle message from commo, all kinds of message
    */
-  void handle_msg(google::protobuf::Message *, MsgType);
+  void handle_msg(google::protobuf::Message *, MsgType, ndn::Name& dataName = dumName_);
 
   /**
    * Add a new chosen_value 

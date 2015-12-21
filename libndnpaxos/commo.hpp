@@ -22,7 +22,8 @@ class Commo {
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t);
-  void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, google::protobuf::Message *, MsgType);
+  void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, ndn::Name& dataName);
+//  void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, google::protobuf::Message *, MsgType);
 //  void set_pool(pool *);
   void start();
   void stop();
@@ -39,7 +40,7 @@ class Commo {
   void onTimeout(const ndn::Interest& interest, int& resendTimes);
   void consume(ndn::Name name);
 
-  void deal_msg(std::string &msg_str); 
+  void deal_msg(std::string &msg_str, ndn::Name &dataName); 
   void deal_timeout(std::string &msg_str); 
 
   Captain *captain_;

@@ -12,6 +12,8 @@
 
 namespace ndnpaxos {
 
+ndn::Name Captain::dumName_ = ndn::Name("");
+
 // no thread pool
 Captain::Captain(View &view, callback_t& callback)
   : view_(&view), 
@@ -116,7 +118,7 @@ void Captain::commit(std::string& data) {
 //    servant_mutex_.lock();
 //    servant_values_[id] = prop_value;
 //    servant_mutex_.unlock();
-    commo_->send_one_msg(msg_com, COMMIT, view_->master_id(), msg_com, COMMIT);
+    commo_->send_one_msg(msg_com, COMMIT, view_->master_id());
   }
   LOG_DEBUG_CAP("commit over!!!");
 }
@@ -311,7 +313,7 @@ void Captain::new_slot(PropValue *prop_value, int try_time, slot_id_t old_slot) 
 /**
  * handle message from commo, all kinds of message
  */
-void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
+void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::Name &dataName) {
 
   work_mutex_.lock();
   if (work_ == false) {
@@ -345,7 +347,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (msg_pre->msg_header().node_id() == view_->whoami())
         handle_msg(msg_ack_pre, PROMISE);
       else // receiver should reply to PROMISE
-        commo_->send_one_msg(msg_ack_pre, PROMISE, msg_pre->msg_header().node_id(), msg, msg_type);
+        commo_->send_one_msg(msg_ack_pre, PROMISE, msg_pre->msg_header().node_id(), dataName);
 
       break;
     }
@@ -403,7 +405,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
             if (i == view_->whoami()) 
               handle_msg(msg_acc, ACCEPT);
             else // like broadcast should set ACCEPT as send[i]
-              commo_->send_one_msg(msg_acc, ACCEPT, i, msg, msg_type);
+              commo_->send_one_msg(msg_acc, ACCEPT, i);
          }
 #else
           MsgAccept *msg_acc = proposers_[slot_id]->curr_proposer->msg_accept();
@@ -458,7 +460,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (msg_acc->msg_header().node_id() == view_->whoami())
         handle_msg(msg_ack_acc, ACCEPTED);
       else 
-        commo_->send_one_msg(msg_ack_acc, ACCEPTED, msg_acc->msg_header().node_id(), msg, msg_type);
+        commo_->send_one_msg(msg_ack_acc, ACCEPTED, msg_acc->msg_header().node_id(), dataName);
 
       break;
     } 
@@ -646,7 +648,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       } else {
         // acceptors_[dec_slot] doesn't contain such value, need learn from this sender
         MsgLearn *msg_lea = msg_learn(dec_slot);
-        commo_->send_one_msg(msg_lea, LEARN, msg_dec->msg_header().node_id(), msg, msg_type);
+        commo_->send_one_msg(msg_lea, LEARN, msg_dec->msg_header().node_id(), dataName);
       } 
       break;
     }
@@ -668,7 +670,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
 #else
       MsgTeach *msg_tea = msg_teach(lea_slot);
 #endif
-      commo_->send_one_msg(msg_tea, TEACH, msg_lea->msg_header().node_id(), msg, msg_type);
+      commo_->send_one_msg(msg_tea, TEACH, msg_lea->msg_header().node_id());
       break;
     }
 
@@ -697,7 +699,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type) {
       if (view_->if_master()) {
         LOG_INFO_CAP("%s(msg_type):COMMIT from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_com->msg_header().node_id(), view_->whoami());
-        commo_->send_one_msg(msg_com, COMMIT, msg_com->msg_header().node_id(), msg, msg_type);
+        commo_->send_one_msg(msg_com, COMMIT, msg_com->msg_header().node_id(), dataName);
         commit(msg_com->mutable_prop_value());
       } else {
         value_id_t id = msg_com->mutable_prop_value()->id();
