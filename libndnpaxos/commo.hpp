@@ -40,11 +40,12 @@ class Commo {
 
   // for consumer part
   void onData(const ndn::Interest& interest, const ndn::Data& data); 
+  void onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack); 
   void onTimeout(const ndn::Interest& interest, int& resendTimes);
   void consume(ndn::Name name);
 
   void deal_msg(std::string &msg_str, ndn::Name &dataName); 
-  void deal_timeout(std::string &msg_str); 
+  void deal_nack(std::string &msg_str); 
 
   Captain *captain_;
   View *view_;

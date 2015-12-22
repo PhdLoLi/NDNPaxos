@@ -151,7 +151,7 @@ class Captain {
   /**
    * Return Command Message
    */
-  MsgCommand *msg_command();
+  MsgCommand *msg_command(CmdType);
 
   /** 
    * Callback function after commit_value  

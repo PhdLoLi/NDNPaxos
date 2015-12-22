@@ -645,6 +645,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
          (acceptors_[dec_slot]->get_max_value()->id() == msg_dec->value_id())) {
         // the value is stored in acceptors_[dec_slot]->max_value_
         add_learn_value(dec_slot, acceptors_[dec_slot]->get_max_value(), msg_dec->msg_header().node_id()); 
+        // NDN to avoid timeout  
+        MsgCommand *msg_cmd = msg_command(REPLY_DECIDE);
+        commo_->send_one_msg(msg_cmd, COMMAND, msg_dec->msg_header().node_id(), dataName);
       } else {
         // acceptors_[dec_slot] doesn't contain such value, need learn from this sender
         MsgLearn *msg_lea = msg_learn(dec_slot);
@@ -678,6 +681,10 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
       // captain should handle this message
       MsgTeach *msg_tea = (MsgTeach *)msg;
       slot_id_t tea_slot = msg_tea->msg_header().slot_id();
+
+      // NDN to avoid timeout  
+      MsgCommand *msg_cmd = msg_command(REPLY_TEACH);
+      commo_->send_one_msg(msg_cmd, COMMAND, msg_tea->msg_header().node_id(), dataName);
 
       if (max_chosen_ >= tea_slot && chosen_values_[tea_slot]) {
         return;
@@ -719,7 +726,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
     case COMMAND: {
       // captain should handle this message
       // not using this!!!!!
-
+      MsgCommand *msg_cmd = (MsgCommand *)msg;
+      LOG_INFO_CAP("%s(msg_type):COMMAND/Simple Reply from (node_id):%u --NodeID %u handle", 
+                    UND_YEL, msg_cmd->msg_header().node_id(), view_->whoami());
       break;
     }
     default: 
@@ -806,11 +815,11 @@ MsgCommit *Captain::msg_commit(PropValue *prop_value) {
 /**
  * Return Command Message
  */
-MsgCommand *Captain::msg_command() {
+MsgCommand *Captain::msg_command(CmdType cmd_type) {
   MsgHeader *msg_header = set_msg_header(MsgType::COMMAND, 0);
   MsgCommand *msg_cmd = new MsgCommand();
   msg_cmd->set_allocated_msg_header(msg_header);
-  msg_cmd->set_cmd_type(SET_MASTER);
+  msg_cmd->set_cmd_type(cmd_type);
   return msg_cmd; 
 }
 

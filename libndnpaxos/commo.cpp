@@ -54,8 +54,8 @@ void Commo::start() {
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   
-  boost::mutex::scoped_lock lock(reg_ok_mutex_);
-  while (!reg_ok_) reg_ok_cond_.wait(lock);
+  // boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  // while (!reg_ok_) reg_ok_cond_.wait(lock);
 
   std::string msg_str;
   msg->SerializeToString(&msg_str);
@@ -103,8 +103,8 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id) {
 //  std::cout << " --- Commo Send ONE to captain " << node_id << " MsgType: " << msg_type << std::endl;
-  boost::mutex::scoped_lock lock(reg_ok_mutex_);
-  while (!reg_ok_) reg_ok_cond_.wait(lock);
+  // boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  // while (!reg_ok_) reg_ok_cond_.wait(lock);
 
   LOG_DEBUG_COM("Send ONE to --%s (msg_type):%s", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
@@ -151,10 +151,11 @@ void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& i
 }
 
 void Commo::onRegisterSucceed(const ndn::InterestFilter& filter) {
-  std::cerr << "onRegisterSucceed! " << filter << std::endl;
-  boost::mutex::scoped_lock lock(reg_ok_mutex_);
-  reg_ok_ = true;
-  reg_ok_cond_.notify_one();
+  LOG_INFO_COM("onRegisterSucceed! %s", filter.getPrefix().toUri().c_str());
+  // std::cerr << "onRegisterSucceed! " << filter << std::endl;
+  // boost::mutex::scoped_lock lock(reg_ok_mutex_);
+  // reg_ok_ = true;
+  // reg_ok_cond_.notify_one();
 }
 
 void Commo::onRegisterFailed(const ndn::Name& prefix, const std::string& reason) {
@@ -216,19 +217,17 @@ void Commo::deal_msg(std::string &msg_str, ndn::Name &dataName) {
   LOG_TRACE_COM("deal_msg Handle finish!");
 }
 
-void Commo::deal_timeout(std::string &msg_str) {
-//  std::string msg_str(static_cast<char*>(request.data()), request.size());
+void Commo::deal_nack(std::string &msg_str) {
   int type = int(msg_str.back() - '0');
-//    LOG_DEBUG_COM("type %d", type);
-  if(type == COMMIT) {
+  if (type == COMMIT) {
     MsgCommit *msg_com = new MsgCommit();
     msg_str.pop_back();
     msg_com->ParseFromString(msg_str);
     std::string text_str;
     google::protobuf::TextFormat::PrintToString(*msg_com, &text_str);
-    LOG_TRACE_COM("deal_timeout Received %s", text_str.c_str());
+    LOG_TRACE_COM("deal_nack Received %s", text_str.c_str());
     captain_->master_change(msg_com->mutable_prop_value());
-    LOG_TRACE_COM("deal_timeout Handle finish!");
+    LOG_TRACE_COM("deal_nack Handle finish!");
   }
 }
 
@@ -238,6 +237,7 @@ void Commo::consume(ndn::Name name) {
   interest.setMustBeFresh(true);
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
+                         bind(&Commo::onNack, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1, 0));
   LOG_TRACE_COM("Consumer Sending %s", interest.getName().toUri().c_str());
 }
@@ -251,20 +251,31 @@ void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
   deal_msg(value_str, dataName);
 }
 
+void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
+  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
+  ndn::name::Component request = interest.getName().get(-1);
+  const uint8_t* value = request.value();
+  size_t size = request.value_size();
+  std::string msg_str(value, value + size);
+  
+  deal_nack(msg_str);
+
+}
+
 void Commo::onTimeout(const ndn::Interest& interest, int& resendTimes) {
   LOG_DEBUG_COM("Consumer Timeout %s, count %d", interest.getName().toUri().c_str(), resendTimes);
+//  std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
   
   if (resendTimes < MAX_TIMEOUT) {
-    face_->expressInterest(interest,
+//    std::cerr << "Rexpress interest " << interest << std::endl;
+    ndn::Interest interest_new(interest);
+    interest_new.refreshNonce();
+//    std::cerr << "Rexpress interest_new " << interest_new << std::endl;
+    face_->expressInterest(interest_new,
                            bind(&Commo::onData, this,  _1, _2),
+                           bind(&Commo::onNack, this,  _1, _2),
                            bind(&Commo::onTimeout, this, _1, resendTimes + 1));
   } else {
-    ndn::name::Component request = interest.getName().get(-1);
-    const uint8_t* value = request.value();
-    size_t size = request.value_size();
-    std::string msg_str(value, value + size);
-  
-    deal_timeout(msg_str);
   }
 
 }
