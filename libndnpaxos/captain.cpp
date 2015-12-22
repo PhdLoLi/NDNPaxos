@@ -115,10 +115,11 @@ void Captain::commit(std::string& data) {
 
     MsgCommit *msg_com = msg_commit(prop_value);
     // blocking style receive reply or timeout now no body call setFilter or run()
-//    servant_mutex_.lock();
-//    servant_values_[id] = prop_value;
-//    servant_mutex_.unlock();
     commo_->send_one_msg(msg_com, COMMIT, view_->master_id());
+    boost::mutex::scoped_lock lock(commit_ok_mutex_);
+    commit_ok_ = false; 
+    while (!commit_ok_) commit_ok_cond_.wait(lock);
+    //std::cout << "I finish waiting!!!!" << std::endl;
   }
   LOG_DEBUG_CAP("commit over!!!");
 }
@@ -712,11 +713,10 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
         value_id_t id = msg_com->mutable_prop_value()->id();
         LOG_DEBUG_CAP("%s(msg_type):Reply_COMMIT from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_com->msg_header().node_id(), view_->whoami());
-        std::cout << "I received reply of committing id: " << id << std::endl; 
-//        servant_mutex_.lock();
-//        servant_values_.erase(id);
-//        servant_mutex_.unlock();
-//        std::cout << "I delete " << id << "from servant_mutex_" << std::endl; 
+
+        boost::mutex::scoped_lock lock(commit_ok_mutex_);
+        commit_ok_ = true;
+        commit_ok_cond_.notify_one();
       }
 
 
@@ -727,7 +727,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
       // captain should handle this message
       // not using this!!!!!
       MsgCommand *msg_cmd = (MsgCommand *)msg;
-      LOG_INFO_CAP("%s(msg_type):COMMAND/Simple Reply from (node_id):%u --NodeID %u handle", 
+      LOG_TRACE_CAP("%s(msg_type):COMMAND/Simple Reply from (node_id):%u --NodeID %u handle", 
                     UND_YEL, msg_cmd->msg_header().node_id(), view_->whoami());
       break;
     }
@@ -933,8 +933,11 @@ void Captain::add_callback() {
           node_id_t node_id = (node_id_t)prop_value->id();
           view_->set_master(node_id);
           LOG_INFO_CAP("master_id changed from %u to %u", old_master, view_->master_id());
-//          if (node_id == view_->whoami()) {
-//          }
+          if (node_id == view_->whoami()) {
+            boost::mutex::scoped_lock lock(commit_ok_mutex_);
+            commit_ok_ = true;
+            commit_ok_cond_.notify_one();
+          }
           break;
         }
       }

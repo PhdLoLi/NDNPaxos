@@ -58,7 +58,7 @@ class Commo {
   ndn::KeyChain keyChain_;
 
   bool reg_ok_;
-  boost::mutex reg_ok_mutex_;
-  boost::condition_variable reg_ok_cond_;
+//  boost::mutex reg_ok_mutex_;
+//  boost::condition_variable reg_ok_cond_;
 };
 } // namespace ndnpaxos

@@ -276,6 +276,12 @@ void Commo::onTimeout(const ndn::Interest& interest, int& resendTimes) {
                            bind(&Commo::onNack, this,  _1, _2),
                            bind(&Commo::onTimeout, this, _1, resendTimes + 1));
   } else {
+    ndn::name::Component request = interest.getName().get(-1);
+    const uint8_t* value = request.value();
+    size_t size = request.value_size();
+    std::string msg_str(value, value + size);
+    
+    deal_nack(msg_str);
   }
 
 }

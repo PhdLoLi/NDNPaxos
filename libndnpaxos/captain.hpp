@@ -217,8 +217,10 @@ class Captain {
 
   boost::mutex work_mutex_;
 
-//  std::map<value_id_t, PropValue *> servant_values_;
-//  boost::mutex servant_mutex_;
+  // for Master_Lease
+  bool commit_ok_;
+  boost::mutex commit_ok_mutex_;
+  boost::condition_variable commit_ok_cond_;
 
 };
 
