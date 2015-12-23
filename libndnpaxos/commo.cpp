@@ -41,10 +41,15 @@ Commo::~Commo() {
 }
 
 void Commo::start() {
-  LOG_INFO("processEvents attached!");
-//  face_->processEvents();
-  face_->getIoService().run();
-  LOG_INFO("processEvents attach Finished?!");
+  try {
+    LOG_INFO("processEvents attached!");
+  //  face_->processEvents();
+    face_->getIoService().run();
+    LOG_INFO("processEvents attach Finished?!");
+  }
+  catch (const std::exception& e) {
+    std::cerr << "ERROR: " << e.what() << std::endl;
+  }
 } 
 
 //void Commo::set_pool(ThreadPool *pool) {
@@ -72,7 +77,7 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
     ndn::Name new_name(consumer_names_[i]);
     new_name.append(message);
 
-    LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
+    LOG_INFO_COM("Broadcast to --%s (msg_type):%s", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
 
     if (msg_type == PREPARE)
       scheduler_->scheduleEvent(ndn::time::milliseconds(0),
@@ -80,7 +85,7 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
     else // ACCEPT DECIDE 
       consume(new_name);
 
-    LOG_DEBUG_COM("Broadcast to --%s (msg_type):%s finished", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
+    LOG_INFO_COM("Broadcast to --%s (msg_type):%s finished", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
   }
 
 }
@@ -106,7 +111,7 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
   // boost::mutex::scoped_lock lock(reg_ok_mutex_);
   // while (!reg_ok_) reg_ok_cond_.wait(lock);
 
-  LOG_DEBUG_COM("Send ONE to --%s (msg_type):%s", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
+  LOG_INFO_COM("Send ONE to --%s (msg_type):%s", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
   std::string msg_str;
   msg->SerializeToString(&msg_str);
@@ -124,6 +129,8 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
                              bind(&Commo::consume, this, new_name));
   } else 
     consume(new_name);
+  LOG_INFO_COM("Send ONE to --%s (msg_type):%s finished", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
+
 }
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id, ndn::Name& dataName) {
@@ -233,12 +240,14 @@ void Commo::deal_nack(std::string &msg_str) {
 
 void Commo::consume(ndn::Name name) {
   ndn::Interest interest(name);
-  interest.setInterestLifetime(ndn::time::milliseconds(1000));
+  interest.setInterestLifetime(ndn::time::milliseconds(2000));
   interest.setMustBeFresh(true);
+  LOG_INFO_COM("Sending I: %s", interest.getName().toUri().c_str());
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
                          bind(&Commo::onNack, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1, 0));
+  LOG_INFO_COM("Finish Sending I: %s", interest.getName().toUri().c_str());
   LOG_TRACE_COM("Consumer Sending %s", interest.getName().toUri().c_str());
 }
 
@@ -252,7 +261,8 @@ void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
 }
 
 void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
-  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
+  std::cerr << ndn::time::steady_clock::now() << " Consumer Nack " << interest.getName().toUri() << std::endl;
+//  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
   ndn::name::Component request = interest.getName().get(-1);
   const uint8_t* value = request.value();
   size_t size = request.value_size();
@@ -263,26 +273,26 @@ void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
 }
 
 void Commo::onTimeout(const ndn::Interest& interest, int& resendTimes) {
-  LOG_DEBUG_COM("Consumer Timeout %s, count %d", interest.getName().toUri().c_str(), resendTimes);
-//  std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
+//  LOG_DEBUG_COM("Consumer Timeout %s, count %d", interest.getName().toUri().c_str(), resendTimes);
+  std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
   
-  if (resendTimes < MAX_TIMEOUT) {
-//    std::cerr << "Rexpress interest " << interest << std::endl;
-    ndn::Interest interest_new(interest);
-    interest_new.refreshNonce();
-//    std::cerr << "Rexpress interest_new " << interest_new << std::endl;
-    face_->expressInterest(interest_new,
-                           bind(&Commo::onData, this,  _1, _2),
-                           bind(&Commo::onNack, this,  _1, _2),
-                           bind(&Commo::onTimeout, this, _1, resendTimes + 1));
-  } else {
-    ndn::name::Component request = interest.getName().get(-1);
-    const uint8_t* value = request.value();
-    size_t size = request.value_size();
-    std::string msg_str(value, value + size);
-    
-    deal_nack(msg_str);
-  }
+//  if (resendTimes < MAX_TIMEOUT) {
+////    std::cerr << "Rexpress interest " << interest << std::endl;
+//    ndn::Interest interest_new(interest);
+//    interest_new.refreshNonce();
+////    std::cerr << "Rexpress interest_new " << interest_new << std::endl;
+//    face_->expressInterest(interest_new,
+//                           bind(&Commo::onData, this,  _1, _2),
+//                           bind(&Commo::onNack, this,  _1, _2),
+//                           bind(&Commo::onTimeout, this, _1, resendTimes + 1));
+//  } else {
+//    ndn::name::Component request = interest.getName().get(-1);
+//    const uint8_t* value = request.value();
+//    size_t size = request.value_size();
+//    std::string msg_str(value, value + size);
+//    
+//    deal_nack(msg_str);
+//  }
 
 }
 

@@ -127,8 +127,8 @@ int main(int argc, char** argv) {
  
 
   std::string config_file;
-  if (argc < 5) {
-    std::cout << "Usage: Node_ID Node_Num Value_Size Window_Size" << std::endl;
+  if (argc < 6) {
+    std::cerr << "Usage: Node_ID Node_Num Value_Size Window_Size Total_time" << std::endl;
     return 0;
   }
 
@@ -136,6 +136,7 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   int value_size = stoi(argv[3]);
   int win_size = stoi(argv[4]);
+  total = stoi(argv[5]);
 
   config_file = "config/localhost-" + to_string(node_num) + ".yaml";
 
@@ -172,8 +173,8 @@ int main(int argc, char** argv) {
   
   ndn::Scheduler scheduler(commo->getFace()->getIoService());
 
-  std::thread listen(bind(&Commo::start, commo));
-  sleep(1);
+//  std::thread listen(bind(&Commo::start, commo));
+//  sleep(1);
 
   for (int i = 0; i < win_size * 1; i++) {
     counter_mut.lock();
@@ -197,7 +198,7 @@ int main(int argc, char** argv) {
 //    LOG_INFO("***********************************************************************");
   }
 
-//  commo->start();
+  commo->start();
 
 
   LOG_INFO("I'm sleeping for 10000");
