@@ -126,6 +126,11 @@ class Captain {
   /**
    * Return Decide Message
    */
+  MsgDecide *msg_decide(slot_id_t, value_id_t);
+
+  /**
+   * Return Decide Message
+   */
   MsgDecide *msg_decide(slot_id_t);
 
   /**

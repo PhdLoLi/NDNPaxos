@@ -59,9 +59,6 @@ void Commo::start() {
 
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   
-  // boost::mutex::scoped_lock lock(reg_ok_mutex_);
-  // while (!reg_ok_) reg_ok_cond_.wait(lock);
-
   std::string msg_str;
   msg->SerializeToString(&msg_str);
   msg_str.append(std::to_string(msg_type));
@@ -77,17 +74,13 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
     ndn::Name new_name(consumer_names_[i]);
     new_name.append(message);
 
-    LOG_INFO_COM("Broadcast to --%s (msg_type):%s", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
-
-    if (msg_type == PREPARE)
-      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-                             bind(&Commo::consume, this, new_name));
-    else // ACCEPT DECIDE 
+    LOG_INFO_COM("Broadcast to --node%d (msg_type):%s", i, msg_type_str[msg_type].c_str());
+//    if (msg_type == PREPARE)
+//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+//                             bind(&Commo::consume, this, new_name));
+//    else // ACCEPT DECIDE 
       consume(new_name);
-
-    LOG_INFO_COM("Broadcast to --%s (msg_type):%s finished", view_->hostname(i).c_str(), msg_type_str[msg_type].c_str());
   }
-
 }
 
 void Commo::produce(std::string &content, ndn::Name& dataName) {
@@ -107,9 +100,6 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
 }
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id) {
-//  std::cout << " --- Commo Send ONE to captain " << node_id << " MsgType: " << msg_type << std::endl;
-  // boost::mutex::scoped_lock lock(reg_ok_mutex_);
-  // while (!reg_ok_) reg_ok_cond_.wait(lock);
 
   LOG_INFO_COM("Send ONE to --%s (msg_type):%s", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
@@ -121,13 +111,11 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
                                (msg_str.c_str()), msg_str.size());
   ndn::Name new_name(consumer_names_[node_id]);
   new_name.append(message);
-//    scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-//                             bind(&Commo::consume, this, new_name));
-  if (msg_type == COMMIT) {
-    //face_->getIoService().run();
-    scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-                             bind(&Commo::consume, this, new_name));
-  } else 
+ // if (msg_type == COMMIT) {
+ //   //face_->getIoService().run();
+ //   scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+ //                            bind(&Commo::consume, this, new_name));
+ // } else 
     consume(new_name);
   LOG_INFO_COM("Send ONE to --%s (msg_type):%s finished", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
@@ -242,13 +230,12 @@ void Commo::consume(ndn::Name name) {
   ndn::Interest interest(name);
   interest.setInterestLifetime(ndn::time::milliseconds(2000));
   interest.setMustBeFresh(true);
-  LOG_INFO_COM("Sending I: %s", interest.getName().toUri().c_str());
+  std::cerr << "Sending I: " << interest << std::endl;
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
                          bind(&Commo::onNack, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1, 0));
-  LOG_INFO_COM("Finish Sending I: %s", interest.getName().toUri().c_str());
-  LOG_TRACE_COM("Consumer Sending %s", interest.getName().toUri().c_str());
+  std::cerr << "Finish Sending I: " << interest << std::endl;
 }
 
 void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {

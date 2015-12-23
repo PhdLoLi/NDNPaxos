@@ -127,7 +127,7 @@ void Captain::commit(std::string& data) {
 void Captain::commit(PropValue* prop_value) {
 
   LOG_DEBUG_CAP("<commit_value> Start");
-  LOG_DEBUG_CAP("(proposers_.size):%lu content:", proposers_.size());
+  LOG_DEBUG_CAP("(proposers_.size):%lu ", proposers_.size());
   for (std::map<slot_id_t, proposer_info_t *>::iterator it = proposers_.begin(); it != proposers_.end(); it++) {
     LOG_DEBUG_CAP("slot_id %llu", it->first);
   }
@@ -523,8 +523,13 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
             }
           }
 
+          // DECIDE Progress to help others fast learning
+          MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+          commo_->broadcast_msg(msg_dec, DECIDE);
+
           // important change max_chosen & max_chosen
           add_chosen_value(slot_id, chosen_value);
+
 
           LOG_DEBUG_CAP("(max_chosen_):%llu (max_chosen_without_hole_):%llu (chosen_values.size()):%lu", 
                         max_chosen_, max_chosen_without_hole_, chosen_values_.size());
@@ -542,10 +547,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               LOG_DEBUG_CAP("This proposer END MISSION Temp Node_ID:%u max_chosen_without_hole_:%llu", view_->whoami(), max_chosen_without_hole_);
 //              tocommit_values_mutex_.unlock();
               proposers_mutex_.unlock();
-              // DECIDE Progress to help others fast learning
-              MsgDecide *msg_dec = msg_decide(slot_id);
-
-              commo_->broadcast_msg(msg_dec, DECIDE);
 
             } else {
 
@@ -565,10 +566,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
   
               proposers_mutex_.unlock();
   
-              // DECIDE Progress to help others fast learning
-              MsgDecide *msg_dec = msg_decide(slot_id);
-              
-              commo_->broadcast_msg(msg_dec, DECIDE);
+;
   
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
 
@@ -599,10 +597,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
             msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
 
             proposers_mutex_.unlock();
-
-            MsgDecide *msg_dec = msg_decide(slot_id);
-
-            commo_->broadcast_msg(msg_dec, DECIDE);
 
 //            new_slot(init_value, try_time, slot_id);
             LOG_INFO_CAP("Recommit the same (value):%s try_time :%d!!!", init_value->data().c_str(), try_time);
@@ -756,6 +750,17 @@ MsgDecide *Captain::msg_decide(slot_id_t slot_id) {
   msg_dec->set_allocated_msg_header(msg_header); 
 //  msg_dec->set_value_id(curr_proposer_->get_chosen_value()->id());
   msg_dec->set_value_id(chosen_values_[slot_id]->id());
+  return msg_dec;
+}
+
+/**
+ * Return Decide Message
+ */
+MsgDecide *Captain::msg_decide(slot_id_t slot_id, value_id_t value_id) {
+  MsgHeader *msg_header = set_msg_header(MsgType::DECIDE, slot_id);
+  MsgDecide *msg_dec = new MsgDecide();
+  msg_dec->set_allocated_msg_header(msg_header); 
+  msg_dec->set_value_id(value_id);
   return msg_dec;
 }
 

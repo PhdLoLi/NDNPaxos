@@ -176,7 +176,7 @@ int main(int argc, char** argv) {
 //  std::thread listen(bind(&Commo::start, commo));
 //  sleep(1);
 
-  for (int i = 0; i < win_size * 1; i++) {
+  for (int i = 0; i < win_size * 2; i++) {
     counter_mut.lock();
     commit_counter++;
     starts[commit_counter] = std::chrono::high_resolution_clock::now(); 
