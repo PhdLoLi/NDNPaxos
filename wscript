@@ -41,6 +41,8 @@ def configure(conf):
 
     conf.check_cfg(package='yaml-cpp', uselib_store='YAML-CPP', args=pargs)
 
+    conf.check_cfg(package='sqlite3', args=['--cflags', '--libs'], uselib_store='SQLITE3', mandatory=True)
+
     conf.check_cfg(package='libndn-cxx', args=['--cflags', '--libs'],
                    uselib_store='NDN_CXX', mandatory=True)
 
@@ -65,7 +67,7 @@ def build(bld):
                                         'libzfec/fec.cc']), 
               target="ndnpaxos",
               includes="libndnpaxos libzfec",
-              use="BOOST NDN_CXX PROTOBUF YAML-CPP",
+              use="BOOST NDN_CXX PROTOBUF YAML-CPP SQLITE3",
               install_path="${PREFIX}/lib")
 
     for app in bld.path.ant_glob('examples/*.cpp'):

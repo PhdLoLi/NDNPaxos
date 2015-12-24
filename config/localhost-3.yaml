@@ -1,3 +1,6 @@
+db: 
+  - path: /Users/lijing/ndndb
+    name: gintama 
 prefix: /ndn/thu/paxos 
 host:
   - name: node0
