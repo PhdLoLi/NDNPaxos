@@ -28,6 +28,7 @@ View::View(node_id_t node_id, std::string cf)
   prefix_ = config["prefix"].as<std::string>();
 	YAML::Node nodes = config["host"];
   YAML::Node lease = config["lease"];
+  YAML::Node db = config["db"];
 
   for (std::size_t i = 0; i < nodes.size(); i++) {
 
@@ -58,6 +59,12 @@ View::View(node_id_t node_id, std::string cf)
     LOG_INFO("No lease Node Found, using default master_id/0 period/500");
   }
   
+  if (db) {
+    std::string path = db["path"].as<std::string>();
+    std::string db_name = db["name"].as<std::string>();
+    db_name_ = path + "/" + host_nodes_[node_id_].name + "/" + db_name; 
+  }
+
   #if MODE_TYPE == 1
   YAML::Node rs = config["rs"];
   if (rs) {
@@ -136,6 +143,10 @@ std::string View::address(node_id_t node_id) {
 
 node_id_t View::master_id() {
   return master_id_;
+}
+
+std::string View::db_name() {
+  return db_name_;
 }
 
 uint64_t View::nodes_size() {

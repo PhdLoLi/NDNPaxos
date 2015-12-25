@@ -125,5 +125,7 @@ using callback_t = std::function<void(slot_id_t, std::string&)>;
 using callback_full_t = std::function<void(slot_id_t, PropValue&, node_id_t)>;
 using callback_latency_t = std::function<void(slot_id_t, PropValue&, int)>;
 
+using callback_db_t = int (*)(void *, int, char **, char **);
+
 #define MAX_TIMEOUT 3 
 }  // namespace ndnpaxos

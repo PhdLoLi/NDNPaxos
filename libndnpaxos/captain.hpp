@@ -37,6 +37,7 @@ class Captain {
   static ndn::Name dumName_;
   Captain(View &view, int window_size);
   Captain(View &, callback_t&);
+  Captain(View &);
 
   ~Captain();
 

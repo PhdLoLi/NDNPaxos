@@ -1,4 +1,4 @@
-/*
+/**
  * Created on: Dec 08, 2015
  * @Author: Lijing OoOfreedom@gmail.com 
  */
@@ -26,6 +26,7 @@ class View {
   std::string hostname(node_id_t);
   std::string address(node_id_t);
   node_id_t master_id();
+  std::string db_name();
 
   uint64_t nodes_size();
   uint32_t period();
@@ -54,5 +55,6 @@ class View {
   node_id_t rs_f_;
   node_id_t rs_qr_;
   node_id_t rs_qw_;
+  std::string db_name_;
 };
 } // namespace ndnpaxos
