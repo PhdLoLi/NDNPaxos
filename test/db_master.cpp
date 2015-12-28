@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   node_id_t my_id = stoul(argv[1]); 
   int node_num = stoi(argv[2]);
   int win_size = 1;
-  if (argc == 3) {
+  if (argc == 4) {
     win_size = stoi(argv[3]);
   }
 
@@ -30,15 +30,23 @@ int main(int argc, char** argv) {
   DBManager db_m(my_id, node_num);
   
   /* Create SQL statement */
-  std::string sql = "CREATE TABLE COMPANY("  \
+  std::string sql_create = "CREATE TABLE COMPANY("  \
         "ID INT PRIMARY KEY     NOT NULL," \
         "NAME           TEXT    NOT NULL," \
         "AGE            INT     NOT NULL," \
         "ADDRESS        CHAR(50)," \
         "SALARY         REAL );";
 
-  
-  db_m.commit(sql);
+  std::string sql_insert = "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+         "VALUES (1, 'Paul', 32, 'California', 20000.00 ); " \
+         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY) "  \
+         "VALUES (2, 'Allen', 25, 'Texas', 15000.00 ); "     \
+         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+         "VALUES (3, 'Teddy', 23, 'Norway', 20000.00 );" \
+         "INSERT INTO COMPANY (ID,NAME,AGE,ADDRESS,SALARY)" \
+         "VALUES (4, 'Mark', 25, 'Rich-Mond ', 65000.00 );"; 
+
+  db_m.commit(sql_insert);
   db_m.start();
 
   LOG_INFO("I'm sleeping for 10000");

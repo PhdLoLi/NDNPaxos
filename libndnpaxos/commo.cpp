@@ -65,6 +65,7 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   ndn::name::Component message(reinterpret_cast<const uint8_t*>
                                (msg_str.c_str()), msg_str.size());
 
+  std::cout << "nodes_size(): " << view_->nodes_size() << std::endl;
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
     
     if (i == view_->whoami()) {
