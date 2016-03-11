@@ -38,14 +38,19 @@ class Master {
     my_name_ = view_->hostname();
 
     // init callback
-//    callback_latency_t call_latency = bind(&Master::count_latency, this, _1, _2, _3);
-    callback_full_t callback_full = bind(&Master::count_exe_latency, this, _1, _2, _3);
+//    callback_t callback = do_sth;
+
+    callback_latency_t call_latency = bind(&Master::count_latency, this, _1, _2, _3);
+
 //    callback_full_t callback_full = count_exe_latency;
+
+    // init one specific captain_
+
     captain_ = new Captain(*view_, win_size_);
 
-//    captain_->set_callback(call_latency);
+    captain_->set_callback(call_latency);
 //    captain_->set_callback(callback);
-    captain_->set_callback(callback_full);
+//    captain_->set_callback(callback_full);
 
     commo_ = new Commo(captain_, *view_);
     captain_->set_commo(commo_);
@@ -59,64 +64,41 @@ class Master {
 
     start_ = std::chrono::high_resolution_clock::now();
     
-    for (int i = 0; i < win_size_; i++) {
-      counter_mut_.lock();
+    for (int i = 0; i < total_; i++) {
       commit_counter_++;
 //      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
-      counter_mut_.unlock();
 //      std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + view_->hostname();
       std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + view_->hostname();
-      LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
+//      LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
 
       captain_->commit(value);
 
-      LOG_INFO("COMMIT DONE***********************************************************************");
+//      LOG_INFO("COMMIT DONE***********************************************************************");
     }
   }
 
   void count_exe_latency(slot_id_t slot_id, PropValue& prop_value, node_id_t node_id) {
   
-    if (prop_value.has_cmd_type()) {
-      counter_mut_.lock();
-      commit_counter_++;
-      counter_mut_.unlock();
-      LOG_INFO("count_exe_latency triggered! but this is a command slot_id : %llu commit_counter_ : %llu ", slot_id, commit_counter_);
-      return;
-    }
-    LOG_INFO("count_exe_latency triggered! slot_id : %llu", slot_id);
-
-    auto finish = std::chrono::high_resolution_clock::now();
-    counter_mut_.lock();
-    commit_counter_++;
-    value_id_t value_id = prop_value.id() >> 16;
-//    periods_.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>
-//                     (finish-starts_[value_id % total_]).count());
-//    trytimes_.push_back(try_time);
+    exe_counter_mut_.lock();
   
+    LOG_INFO("exe_latency slot_id:%llu value_id:%llu value:%s", 
+            slot_id, prop_value.id(), prop_value.data().c_str());
   
-    std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
-//    starts_[commit_counter_ % total_] = std::chrono::high_resolution_clock::now();
-    slot_id_t counter_tmp = commit_counter_;
-    counter_mut_.unlock();
-
-    if (counter_tmp <= total_ * 1) {
-  //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
-      if (counter_tmp % 10000 == 0) {
-        auto finish = std::chrono::high_resolution_clock::now();
-        uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
-        start_ = std::chrono::high_resolution_clock::now();
-        int throughput = 10000 * 1000 / period;
-        LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
-      }
-      std::cout << "master want to commit Value: " << value << std::endl;
-      captain_->commit(value);
-      std::cout << "master want to commit Value Finish: " << value << std::endl;
-    }
+    exe_counter_mut_.unlock();
   }
   
   void count_latency(slot_id_t slot_id, PropValue& prop_value, int try_time) {
   
-
+//    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
+  
+    if (commit_counter_ % 100000 == 0) {
+      auto finish = std::chrono::high_resolution_clock::now();
+      uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
+      start_ = std::chrono::high_resolution_clock::now();
+      int throughput = 10000 * 1000 / period;
+      LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", commit_counter_, period, throughput);
+//      std::cout << "Last_commit -- counter: " << commit_counter_ << " milliseconds: " << period << " throughput: " << throughput; 
+    }
   }
   
   
@@ -155,7 +137,7 @@ static void sig_int(int num) {
 }  
 
 int main(int argc, char** argv) {
-  signal(SIGINT, sig_int);
+//  signal(SIGINT, sig_int);
  
 
   if (argc < 6) {

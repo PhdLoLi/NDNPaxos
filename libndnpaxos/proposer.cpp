@@ -20,9 +20,9 @@ Proposer::Proposer(View &view, PropValue &value)
   qw_ = view_->rs_qw();
   rs_encoder_ = new RSEncoder(view_->rs_x(), view_->rs_n());
   rs_decoder_ = new RSDecoder(view_->rs_x(), view_->rs_n());
+  LOG_TRACE_PRO("Init RS for Proposer! qr_:%u qw_:%u", qr_, qw_);
   #else
   #endif 
-  LOG_TRACE_PRO("Init RS for Proposer! qr_:%u qw_:%u", qr_, qw_);
 }
 
 Proposer::Proposer() : max_ballot_(0), max_value_(NULL) {
@@ -53,6 +53,7 @@ MsgPrepare *Proposer::msg_prepare() {
 MsgPrepare *Proposer::restart_msg_prepare() {
   curr_value_ = NULL;
   // clear map
+  LOG_INFO_PRO("before map be cleared !!! restart_msg_prepare()");
   msg_ack_prepare_.clear();
   msg_ack_accept_.clear();
   return msg_prepare();
@@ -207,8 +208,9 @@ AckType Proposer::handle_msg_accepted(MsgAckAccept *msg_ack_acc) {
     return DROP;
   }
   node_id_t node_id = (uint16_t)msg_ack_acc->msg_header().node_id();
-//  std::cout << "Inside handle_msg_accepted node_id: " << node_id << std::endl;
+//  std::cout << "Inside handle_msg_accepted node_id: " << node_id << "size of msg_ack_accept " << msg_ack_accept_.size() << std::endl;
   msg_ack_accept_[node_id] = msg_ack_acc;
+//  std::cout << "After handle_msg_accepted node_id: " << node_id << std::endl;
 
   // NOT_ENOUGH
   if (msg_ack_accept_.size() < qw_) {
@@ -262,6 +264,7 @@ void Proposer::die_clean() {
   curr_value_ = NULL;
   curr_ballot_ = 0;
   // clear map
+  LOG_INFO_PRO("before map be cleared !!! die_clean()");
   msg_ack_prepare_.clear();
   msg_ack_accept_.clear();
 }

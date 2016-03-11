@@ -16,8 +16,8 @@ namespace ndnpaxos {
 Commo::Commo(Captain *captain, View &view) 
   : captain_(captain), view_(&view), reg_ok_(false) {
 
-  face_ = ndn::make_shared<ndn::Face>();
-  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
+//  face_ = ndn::make_shared<ndn::Face>();
+//  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
@@ -29,11 +29,11 @@ Commo::Commo(Captain *captain, View &view)
     LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
 
-  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
-  face_->setInterestFilter(consumer_names_[view_->whoami()],
-                        bind(&Commo::onInterest, this, _1, _2),
-                        bind(&Commo::onRegisterSucceed, this, _1),
-                        bind(&Commo::onRegisterFailed, this, _1, _2));
+//  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
+//  face_->setInterestFilter(consumer_names_[view_->whoami()],
+//                        bind(&Commo::onInterest, this, _1, _2),
+//                        bind(&Commo::onRegisterSucceed, this, _1),
+//                        bind(&Commo::onRegisterFailed, this, _1, _2));
 //  boost::thread listen(boost::bind(&Commo::start, this));
 }
 
@@ -52,23 +52,23 @@ void Commo::start() {
   }
 } 
 
-//void Commo::set_pool(ThreadPool *pool) {
-//void Commo::set_pool(pool *pl) {
-//  pool_ = pl;
-//}
-
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   
+  if (view_->nodes_size() == 1) return;
+
   std::string msg_str;
   msg->SerializeToString(&msg_str);
   msg_str.append(std::to_string(msg_type));
   ndn::name::Component message(reinterpret_cast<const uint8_t*>
                                (msg_str.c_str()), msg_str.size());
 
+  std::cout << "I am Fine before print nodes_size()" << std::endl;
   std::cout << "nodes_size(): " << view_->nodes_size() << std::endl;
+  std::cout << "I am Fine after print nodes_size()" << std::endl;
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
     
     if (i == view_->whoami()) {
+      LOG_INFO_COM("Broadcast to myself %d (msg_type):%s", i, msg_type_str[msg_type].c_str());
       continue;
     }
 
