@@ -128,10 +128,7 @@ void Captain::commit(std::string& data) {
 void Captain::commit(PropValue* prop_value) {
 
   LOG_DEBUG_CAP("<commit_value> Start");
-  LOG_DEBUG_CAP("(proposers_.size):%lu ", proposers_.size());
-  for (std::map<slot_id_t, proposer_info_t *>::iterator it = proposers_.begin(); it != proposers_.end(); it++) {
-    LOG_DEBUG_CAP("slot_id %llu", it->first);
-  }
+
 
   if (proposers_.size() > window_size_) {
     LOG_INFO_CAP("Error Occur!!!! proposers_.size() %llu > window_size! %llu", proposers_.size(), window_size_);
@@ -141,6 +138,11 @@ void Captain::commit(PropValue* prop_value) {
   // if all proposers are active, push commit value into waiting queue(tocommit_values)
 
   proposers_mutex_.lock();
+
+//  LOG_INFO_CAP("(proposers_.size):%lu ", proposers_.size());
+//  for (std::map<slot_id_t, proposer_info_t *>::iterator it = proposers_.begin(); it != proposers_.end(); it++) {
+//    LOG_INFO_CAP("slot_id %llu", it->first);
+//  }
 
   if (proposers_.size() == window_size_) {
     tocommit_values_.push(prop_value);
@@ -518,11 +520,11 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
           proposers_mutex_.unlock();
 
-          if (chosen_value->id() == init_value->id()) {
-            if (callback_latency_) {
-              callback_latency_(slot_id, *chosen_value, try_time);
-            }
-          }
+//          if (chosen_value->id() == init_value->id()) {
+//            if (callback_latency_) {
+//              callback_latency_(slot_id, *chosen_value, try_time);
+//            }
+//          }
 
           // DECIDE Progress to help others fast learning
           MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
@@ -545,7 +547,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 //            tocommit_values_mutex_.lock();
             
             if (tocommit_values_.empty()) {
-              LOG_DEBUG_CAP("This proposer END MISSION Temp Node_ID:%u max_chosen_without_hole_:%llu", view_->whoami(), max_chosen_without_hole_);
+              LOG_DEBUG_CAP("This proposer END MISSION Temp Node_ID:%u max_chosen_without_hole_:%llu", 
+                  view_->whoami(), max_chosen_without_hole_);
 //              tocommit_values_mutex_.unlock();
               proposers_mutex_.unlock();
 
@@ -567,7 +570,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
   
               proposers_mutex_.unlock();
   
-;
   
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
 
@@ -576,11 +578,10 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
   
             }
 
-//            if (callback_latency_) {
-//              callback_latency_(slot_id, *chosen_value, try_time);
-//            }
+            if (callback_latency_) {
+              callback_latency_(slot_id, *chosen_value, try_time);
+            }
 
-//          new_slot(prop_value, 0, slot_id);
 
           } else {
             // recommit the same value need to change
