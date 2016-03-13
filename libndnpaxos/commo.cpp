@@ -15,8 +15,8 @@ namespace ndnpaxos {
 Commo::Commo(Captain *captain, View &view) 
   : captain_(captain), view_(&view), reg_ok_(false) {
 
-//  face_ = ndn::make_shared<ndn::Face>();
-//  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
+  face_ = ndn::make_shared<ndn::Face>();
+  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
@@ -28,13 +28,15 @@ Commo::Commo(Captain *captain, View &view)
     LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
 
-//  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
-//  face_->setInterestFilter(consumer_names_[view_->whoami()],
-//                        bind(&Commo::onInterest, this, _1, _2),
-//                        bind(&Commo::onRegisterSucceed, this, _1),
-//                        bind(&Commo::onRegisterFailed, this, _1, _2));
+  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
+  face_->setInterestFilter(consumer_names_[view_->whoami()],
+                        bind(&Commo::onInterest, this, _1, _2),
+                        bind(&Commo::onRegisterSucceed, this, _1),
+                        bind(&Commo::onRegisterFailed, this, _1, _2));
 //  boost::thread listen(boost::bind(&Commo::start, this));
-    pool_ = new pool(1);
+  pool_ = new pool(1);
+  std::cout << "win_size_ " << captain_->win_size() << std::endl;
+//  win_pool_ = new pool(captain_->win_size());
 }
 
 Commo::~Commo() {
@@ -87,7 +89,8 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
 //      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
 //                             bind(&Commo::consume, this, new_name));
 //    else // ACCEPT DECIDE 
-      consume(new_name);
+    consume(new_name);
+//    win_pool_->schedule(boost::bind(&Commo::consume, this, new_name));
   }
 }
 
@@ -124,7 +127,8 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
  //   scheduler_->scheduleEvent(ndn::time::milliseconds(0),
  //                            bind(&Commo::consume, this, new_name));
  // } else 
-    consume(new_name);
+//  win_pool_->schedule(boost::bind(&Commo::consume, this, new_name));
+  consume(new_name);
   LOG_INFO_COM("Send ONE to --%s (msg_type):%s finished", view_->hostname(node_id).c_str(), msg_type_str[msg_type].c_str());
 
 }
@@ -234,16 +238,16 @@ void Commo::deal_nack(std::string &msg_str) {
   }
 }
 
-void Commo::consume(ndn::Name name) {
+void Commo::consume(ndn::Name& name) {
   ndn::Interest interest(name);
-  interest.setInterestLifetime(ndn::time::milliseconds(2000));
+  interest.setInterestLifetime(ndn::time::milliseconds(500));
   interest.setMustBeFresh(true);
-  std::cerr << "Sending I: " << interest << std::endl;
+//  std::cerr << "Sending I: " << interest << std::endl;
   face_->expressInterest(interest,
                          bind(&Commo::onData, this,  _1, _2),
                          bind(&Commo::onNack, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1, 0));
-  std::cerr << "Finish Sending I: " << interest << std::endl;
+//  std::cerr << "Finish Sending I: " << interest << std::endl;
 }
 
 void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
@@ -256,7 +260,7 @@ void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
 }
 
 void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
-  std::cerr << ndn::time::steady_clock::now() << " Consumer Nack " << interest.getName().toUri() << std::endl;
+//  std::cerr << ndn::time::steady_clock::now() << " Consumer Nack " << interest.getName().toUri() << std::endl;
 //  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
   ndn::name::Component request = interest.getName().get(-1);
   const uint8_t* value = request.value();
@@ -269,7 +273,7 @@ void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
 
 void Commo::onTimeout(const ndn::Interest& interest, int& resendTimes) {
 //  LOG_DEBUG_COM("Consumer Timeout %s, count %d", interest.getName().toUri().c_str(), resendTimes);
-  std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
+//  std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
   
 //  if (resendTimes < MAX_TIMEOUT) {
 ////    std::cerr << "Rexpress interest " << interest << std::endl;

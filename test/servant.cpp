@@ -103,6 +103,7 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   
   Servant servant(my_id, node_num);
+  servant.attach();
 
 
   LOG_INFO("I'm sleeping for 10000");

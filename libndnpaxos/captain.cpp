@@ -955,4 +955,7 @@ void Captain::add_callback() {
 
 }
 
+int Captain::win_size() {
+  return window_size_;
+}
 } //  namespace ndnpaxos

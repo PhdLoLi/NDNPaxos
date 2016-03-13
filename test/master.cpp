@@ -22,9 +22,6 @@
 namespace ndnpaxos {
 
 using namespace std;
-//using namespace boost::filesystem;
-
-
   
 class Master {
  public:
@@ -52,6 +49,7 @@ class Master {
 
     commo_ = new Commo(captain_, *view_);
     captain_->set_commo(commo_);
+    pool_ = new pool(win_size);
 
   }
 
@@ -78,7 +76,8 @@ class Master {
 //      std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + view_->hostname();
       std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + view_->hostname();
       LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
-      captain_->commit(value);
+//      captain_->commit(value);
+      pool_->schedule(boost::bind(&Master::commit_thread, this, value));
       LOG_INFO(" +++++++++++ ZERO FINISH Commit Value: %s +++++++++++", value.c_str());
 
 //      LOG_INFO("COMMIT DONE***********************************************************************");
@@ -99,7 +98,7 @@ class Master {
       LOG_INFO("count_latency triggered! but this is a command slot_id : %llu commit_counter_ : %llu ", slot_id, commit_counter_);
       return;
     }
-//    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
+    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
 
     auto finish = std::chrono::high_resolution_clock::now();
     counter_mut_.lock();
@@ -119,11 +118,11 @@ class Master {
 
     if (counter_tmp <= total_ * 1) {
   //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
-      if (counter_tmp % 10000 == 0) {
+      if (counter_tmp % 10 == 0) {
         auto finish = std::chrono::high_resolution_clock::now();
         uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
         start_ = std::chrono::high_resolution_clock::now();
-        int throughput = 10000 * 1000 / period;
+        int throughput = 10 * 1000 / period;
         LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
         throughputs_.push_back(throughput);
       }
@@ -146,6 +145,7 @@ class Master {
   Captain *captain_;
   View *view_;
   Commo *commo_;
+  pool *pool_;
 
   int total_;
   slot_id_t commit_counter_;
@@ -184,7 +184,7 @@ int main(int argc, char** argv) {
   
   Master master(my_id, node_num, value_size, win_size, total);
   master.start_commit();
-
+  master.attach();
 //  master.commo_->start();
 
   LOG_INFO("I'm sleeping for 10000");
