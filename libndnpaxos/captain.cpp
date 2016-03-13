@@ -139,10 +139,6 @@ void Captain::commit(PropValue* prop_value) {
 
   proposers_mutex_.lock();
 
-//  LOG_INFO_CAP("(proposers_.size):%lu ", proposers_.size());
-//  for (std::map<slot_id_t, proposer_info_t *>::iterator it = proposers_.begin(); it != proposers_.end(); it++) {
-//    LOG_INFO_CAP("slot_id %llu", it->first);
-//  }
 
   if (proposers_.size() == window_size_) {
     tocommit_values_.push(prop_value);
@@ -170,7 +166,6 @@ void Captain::commit(PropValue* prop_value) {
 
   proposers_mutex_.unlock();
   
-  handle_msg(msg_pre, PREPARE);
   commo_->broadcast_msg(msg_pre, PREPARE);
 
 }
@@ -232,7 +227,6 @@ void Captain::commit_value(std::string& data) {
 
   proposers_mutex_.unlock();
 
-  handle_msg(msg_pre, PREPARE);
   commo_->broadcast_msg(msg_pre, PREPARE);
 
 //  new_slot(prop_value, 0);
@@ -261,7 +255,6 @@ void Captain::new_slot(PropValue *prop_value, int try_time) {
   // always captain set slot_id for msg
   msg_pre->mutable_msg_header()->set_slot_id(slot_id);
 
-  handle_msg(msg_pre, PREPARE);
   commo_->broadcast_msg(msg_pre, PREPARE);
 }
 
@@ -301,7 +294,6 @@ void Captain::new_slot(PropValue *prop_value, int try_time, slot_id_t old_slot) 
   msg_pre->mutable_msg_header()->set_slot_id(slot_id);
 
   LOG_TRACE_CAP("<new_slot> call <broadcast_msg> with (msg_type):PREPARE");
-  handle_msg(msg_pre, PREPARE);
   commo_->broadcast_msg(msg_pre, PREPARE);
   LOG_TRACE_CAP("<new_slot> call <broadcast_msg> Over");
 }
@@ -406,9 +398,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
             MsgAccept *msg_acc = msg_accs[i];
             msg_acc->mutable_msg_header()->set_slot_id(slot_id);
   
-            if (i == view_->whoami()) 
-              handle_msg(msg_acc, ACCEPT);
-            else // like broadcast should set ACCEPT as send[i]
+//            if (i == view_->whoami()) 
+//              handle_msg(msg_acc, ACCEPT);
+//            else // like broadcast should set ACCEPT as send[i]
               commo_->send_one_msg(msg_acc, ACCEPT, i);
          }
 #else
@@ -420,7 +412,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
           proposers_mutex_.unlock();
 
-          handle_msg(msg_acc, ACCEPT);
           commo_->broadcast_msg(msg_acc, ACCEPT);
 #endif
           break;
@@ -433,7 +424,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           proposers_[slot_id]->proposer_status = INIT;
           proposers_mutex_.unlock();
 
-          handle_msg(msg_pre, PREPARE);
           commo_->broadcast_msg(msg_pre, PREPARE);
           break;
         }
@@ -520,15 +510,13 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
           proposers_mutex_.unlock();
 
-//          if (chosen_value->id() == init_value->id()) {
-//            if (callback_latency_) {
-//              callback_latency_(slot_id, *chosen_value, try_time);
-//            }
-//          }
+          if (chosen_value->id() == init_value->id()) {
+            if (callback_latency_) {
+              callback_latency_(slot_id, *chosen_value, try_time);
+            }
+          }
 
-          // DECIDE Progress to help others fast learning
-          MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
-          commo_->broadcast_msg(msg_dec, DECIDE);
+ 
 
           // important change max_chosen & max_chosen
           add_chosen_value(slot_id, chosen_value);
@@ -551,6 +539,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
                   view_->whoami(), max_chosen_without_hole_);
 //              tocommit_values_mutex_.unlock();
               proposers_mutex_.unlock();
+            // DECIDE Progress to help others fast learning
+             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+             commo_->broadcast_msg(msg_dec, DECIDE);
 
             } else {
 
@@ -570,17 +561,19 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
   
               proposers_mutex_.unlock();
   
+             // DECIDE Progress to help others fast learning
+              MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+              commo_->broadcast_msg(msg_dec, DECIDE);
   
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
 
-              handle_msg(msg_pre, PREPARE);
               commo_->broadcast_msg(msg_pre, PREPARE);
   
             }
 
-            if (callback_latency_) {
-              callback_latency_(slot_id, *chosen_value, try_time);
-            }
+//            if (callback_latency_) {
+//              callback_latency_(slot_id, *chosen_value, try_time);
+//            }
 
 
           } else {
@@ -600,9 +593,11 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
             proposers_mutex_.unlock();
 
+            MsgDecide *msg_dec = msg_decide(slot_id);
+
+            commo_->broadcast_msg(msg_dec, DECIDE);
 //            new_slot(init_value, try_time, slot_id);
             LOG_INFO_CAP("Recommit the same (value):%s try_time :%d!!!", init_value->data().c_str(), try_time);
-            handle_msg(msg_pre, PREPARE);
             commo_->broadcast_msg(msg_pre, PREPARE);
             
           }
@@ -618,7 +613,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           proposers_[slot_id]->proposer_status = INIT;
           proposers_mutex_.unlock();
 
-          handle_msg(msg_pre, PREPARE);
           commo_->broadcast_msg(msg_pre, PREPARE);
          
         }

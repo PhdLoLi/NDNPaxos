@@ -5,7 +5,6 @@
 
 #include "acceptor.hpp"
 #include <iostream>
-
 namespace ndnpaxos {
 
 Acceptor::Acceptor(View &view) 

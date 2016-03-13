@@ -53,7 +53,6 @@ MsgPrepare *Proposer::msg_prepare() {
 MsgPrepare *Proposer::restart_msg_prepare() {
   curr_value_ = NULL;
   // clear map
-  LOG_INFO_PRO("before map be cleared !!! restart_msg_prepare()");
   msg_ack_prepare_.clear();
   msg_ack_accept_.clear();
   return msg_prepare();
@@ -208,9 +207,7 @@ AckType Proposer::handle_msg_accepted(MsgAckAccept *msg_ack_acc) {
     return DROP;
   }
   node_id_t node_id = (uint16_t)msg_ack_acc->msg_header().node_id();
-//  std::cout << "Inside handle_msg_accepted node_id: " << node_id << "size of msg_ack_accept " << msg_ack_accept_.size() << std::endl;
   msg_ack_accept_[node_id] = msg_ack_acc;
-//  std::cout << "After handle_msg_accepted node_id: " << node_id << std::endl;
 
   // NOT_ENOUGH
   if (msg_ack_accept_.size() < qw_) {
@@ -264,7 +261,6 @@ void Proposer::die_clean() {
   curr_value_ = NULL;
   curr_ballot_ = 0;
   // clear map
-  LOG_INFO_PRO("before map be cleared !!! die_clean()");
   msg_ack_prepare_.clear();
   msg_ack_accept_.clear();
 }

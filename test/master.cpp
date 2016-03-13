@@ -7,7 +7,6 @@
 #include "commo.hpp"
 #include "captain.hpp"
 
-#include "threadpool.hpp" 
 //#include <boost/thread/mutex.hpp>
 //#include <boost/bind.hpp>
 #include <fstream>
@@ -17,13 +16,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <algorithm>
+#include <boost/bind.hpp>
 //#include <thread>
 
 namespace ndnpaxos {
 
 using namespace std;
 //using namespace boost::filesystem;
-using namespace boost::threadpool;
 
 
   
@@ -43,7 +42,7 @@ class Master {
     my_name_ = view_->hostname();
 
     // init callback
-    callback_latency_t call_latency = bind(&Master::count_latency, this, _1, _2, _3);
+    callback_latency_t call_latency = boost::bind(&Master::count_latency, this, _1, _2, _3);
 //    callback_full_t callback_full = bind(&Master::count_exe_latency, this, _1, _2, _3);
     captain_ = new Captain(*view_, win_size_);
 
@@ -53,11 +52,14 @@ class Master {
 
     commo_ = new Commo(captain_, *view_);
     captain_->set_commo(commo_);
-    my_pool_ = new pool(win_size);
 
   }
 
   ~Master() {
+  }
+
+  void attach() {
+    commo_->start();
   }
 
   void commit_thread(std::string &value) {
@@ -71,13 +73,13 @@ class Master {
     for (int i = 0; i < win_size_; i++) {
       counter_mut_.lock();
       commit_counter_++;
-//      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
+      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
       counter_mut_.unlock();
 //      std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + view_->hostname();
       std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + view_->hostname();
-      LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
-//      my_pool_->schedule(bind(&Master::commit_thread, this, value));
+      LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
       captain_->commit(value);
+      LOG_INFO(" +++++++++++ ZERO FINISH Commit Value: %s +++++++++++", value.c_str());
 
 //      LOG_INFO("COMMIT DONE***********************************************************************");
     }
@@ -103,13 +105,15 @@ class Master {
     counter_mut_.lock();
     commit_counter_++;
     value_id_t value_id = prop_value.id() >> 16;
-//    periods_.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>
-//                     (finish-starts_[value_id % total_]).count());
-//    trytimes_.push_back(try_time);
+    periods_.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>
+                     (finish-starts_[value_id % total_]).count());
+    trytimes_.push_back(try_time);
   
+//    LOG_INFO("periods[%d] = %d", periods_.size() - 1, periods_[periods_.size() - 1]);
+//    LOG_INFO("trytimes[%d] = %d", trytimes_.size() - 1, trytimes_[trytimes_.size() - 1]);
   
     std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
-//    starts_[commit_counter_ % total_] = std::chrono::high_resolution_clock::now();
+    starts_[commit_counter_ % total_] = std::chrono::high_resolution_clock::now();
     slot_id_t counter_tmp = commit_counter_;
     counter_mut_.unlock();
 
@@ -121,20 +125,18 @@ class Master {
         start_ = std::chrono::high_resolution_clock::now();
         int throughput = 10000 * 1000 / period;
         LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
+        throughputs_.push_back(throughput);
       }
 //      std::cout << "master want to commit Value: " << value << std::endl;
 //      boost::thread commit_first(bind(&Master::commit_thread, this, value));
 //      LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
-      my_pool_->schedule(bind(&Master::commit_thread, this, value));
+      captain_->commit(value);
 //      LOG_INFO(" +++++++++++ FINISH Commit Value: %s +++++++++++", value.c_str());
-//      captain_->commit(value);
 //      std::cout << "master want to commit Value Finish: " << value << std::endl;
     }
 
   }
   
-  
-
   std::string my_name_;
   node_id_t my_id_;
   node_id_t node_num_;
@@ -144,16 +146,14 @@ class Master {
   Captain *captain_;
   View *view_;
   Commo *commo_;
-  pool *my_pool_;
 
   int total_;
   slot_id_t commit_counter_;
 
   boost::mutex counter_mut_;
-  boost::mutex exe_counter_mut_;
   
   std::vector<uint64_t> periods_;
-  std::vector<uint64_t> exe_periods_;
+  std::vector<uint64_t> throughputs_;
   std::vector<int> trytimes_;
   std::vector<std::chrono::high_resolution_clock::time_point> starts_;
   

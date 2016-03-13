@@ -6,11 +6,10 @@
 #include "commo.hpp"
 #include "captain.hpp"
 #include <iostream>
-//#include "threadpool.hpp" 
 #include <boost/thread/mutex.hpp>
 #include <boost/bind.hpp>
 
-//using namespace boost::threadpool;
+
 namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view) 
@@ -35,6 +34,7 @@ Commo::Commo(Captain *captain, View &view)
 //                        bind(&Commo::onRegisterSucceed, this, _1),
 //                        bind(&Commo::onRegisterFailed, this, _1, _2));
 //  boost::thread listen(boost::bind(&Commo::start, this));
+    pool_ = new pool(1);
 }
 
 Commo::~Commo() {
@@ -52,9 +52,15 @@ void Commo::start() {
   }
 } 
 
+void Commo::handle_myself(google::protobuf::Message *msg, MsgType msg_type) {
+  captain_->handle_msg(msg, msg_type);
+}
 void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   
-  if (view_->nodes_size() == 1) return;
+  if (view_->nodes_size() == 1) {
+    pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
+    return;
+  }
 
   std::string msg_str;
   msg->SerializeToString(&msg_str);
@@ -62,20 +68,21 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   ndn::name::Component message(reinterpret_cast<const uint8_t*>
                                (msg_str.c_str()), msg_str.size());
 
-  std::cout << "I am Fine before print nodes_size()" << std::endl;
-  std::cout << "nodes_size(): " << view_->nodes_size() << std::endl;
-  std::cout << "I am Fine after print nodes_size()" << std::endl;
+
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
     
     if (i == view_->whoami()) {
-      LOG_INFO_COM("Broadcast to myself %d (msg_type):%s", i, msg_type_str[msg_type].c_str());
+      pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
+//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
+//                             bind(&Captain::handle_msg, captain_, msg, msg_type));
+      LOG_DEBUG_COM("Broadcast to myself %d (msg_type):%s", i, msg_type_str[msg_type].c_str());
       continue;
     }
 
     ndn::Name new_name(consumer_names_[i]);
     new_name.append(message);
 
-    LOG_INFO_COM("Broadcast to --node%d (msg_type):%s", i, msg_type_str[msg_type].c_str());
+    LOG_DEBUG_COM("Broadcast to --node%d (msg_type):%s", i, msg_type_str[msg_type].c_str());
 //    if (msg_type == PREPARE)
 //      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
 //                             bind(&Commo::consume, this, new_name));
