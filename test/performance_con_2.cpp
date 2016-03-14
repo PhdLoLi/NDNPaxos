@@ -18,7 +18,7 @@ class Consumer {
  public:
   Consumer(std::string node_name, ndn::Name prefix, int win_size, int total)
     : node_name_(node_name), prefix_(prefix), win_size_(win_size), total_(total), 
-      commit_counter_(0), thr_counter_(0),  starts_(total), periods_(total) {
+      commit_counter_(0), starts_(total), periods_(total) {
 
     prefix_.append(node_name);
 
@@ -36,20 +36,18 @@ class Consumer {
 
     start_ = std::chrono::high_resolution_clock::now();
     
+    for (int i = 0; i < total_; i++) {
 
-    for (int i = 0; i < win_size_; i++) {
-      
-      ndn::Name new_name(prefix_);
-      counter_mut_.lock();
-      std::string value =  std::to_string(commit_counter_) + " from " + node_name_;
+      std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + node_name_;
       std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
-      new_name.appendNumber(commit_counter_);
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
-      commit_counter_++;
-      counter_mut_.unlock();
+//      LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
+      starts_[i] = std::chrono::high_resolution_clock::now(); 
+      ndn::Name new_name(prefix_);
+      new_name.appendNumber(i);
       consume(new_name);
-//      usleep(20000);
-//      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
+      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
+      usleep(200000);
+//      LOG_INFO(" +++++++++++ ZERO FINISH Commit Value: %s +++++++++++", value.c_str());
 
     }
   }
@@ -73,42 +71,27 @@ class Consumer {
 //    size_t size = data.getContent().value_size();
 //    std::string value_str(value, value + size);
     int req_num = interest.getName().get(-1).toNumber();
-//    printf("Consumer onData ACK Number: %d\n", req_num);
+    printf("Consumer onData ACK Number: %d\n", req_num);
 
     auto finish = std::chrono::high_resolution_clock::now();
     periods_[req_num] = (std::chrono::duration_cast<std::chrono::nanoseconds>
                         (finish-starts_[req_num]).count());
   
-    thr_mut_.lock();
-    thr_counter_++;
 
-    if (thr_counter_ % 10 == 0) {
+    counter_mut_.lock();
+    commit_counter_++;
+  
+    uint64_t counter_tmp = commit_counter_;
+    counter_mut_.unlock();
+
+    if (counter_tmp % 10 == 0) {
       auto finish = std::chrono::high_resolution_clock::now();
       uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
-      int throughput = 10 * 1000 / period;
-      printf("onData -- counter:%d milliseconds:%llu throughput:%d", thr_counter_, period, throughput);
-      printf("   periods[%d] = %d thr_counter = %d\n", req_num, periods_[req_num], thr_counter_);
-      throughputs_.push_back(throughput);
       start_ = std::chrono::high_resolution_clock::now();
-    }
-
-//    printf("periods[%d] = %d thr_counter = %d\t", req_num, periods_[req_num], thr_counter_);
-    thr_mut_.unlock();
-
-    ndn::Name new_name(prefix_);
-    counter_mut_.lock();
-    if (commit_counter_ < total_) {
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
-      std::string value = std::to_string(commit_counter_) + " from " + node_name_;
-//      std::cout << "Start commit +++++++++++ " << value << std::endl;
-      new_name.appendNumber(commit_counter_);
-      commit_counter_++;
-      counter_mut_.unlock();
-      consume(new_name);
-    } else {
-//      printf("commit_counter %d Finish!!!!!!!!!!!!!\n", commit_counter_);
-      commit_counter_++;
-      counter_mut_.unlock();
+      int throughput = 10 * 1000 / period;
+      printf("Last_commit -- counter:%d milliseconds:%llu throughput:%d\n", counter_tmp, period, throughput);
+      printf("periods[%d] = %d\n", req_num, periods_[req_num]);
+      throughputs_.push_back(throughput);
     }
   }
   
@@ -125,10 +108,8 @@ class Consumer {
   int win_size_;
   int total_;
   uint64_t commit_counter_;
-  uint64_t thr_counter_;
 
   boost::mutex counter_mut_;
-  boost::mutex thr_mut_;
   
   std::vector<uint64_t> periods_;
   std::vector<uint64_t> throughputs_;
