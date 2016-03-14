@@ -30,7 +30,7 @@ class Master {
       value_size_(value_size), win_size_(win_size), total_(total),
       commit_counter_(0), starts_(total) {
 
-    std::string config_file = "config/localhost-" + to_string(node_num_) + ".yaml";
+    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
 
     // init view_ for one captain_
     view_ = new View(my_id_, config_file);
@@ -47,7 +47,7 @@ class Master {
 //    captain_->set_callback(callback);
 //    captain_->set_callback(callback_full);
 
-    commo_ = new Commo(captain_, *view_);
+    commo_ = new Commo(captain_, *view_, 0);
     captain_->set_commo(commo_);
     pool_ = new pool(win_size);
 
@@ -68,7 +68,7 @@ class Master {
 
     start_ = std::chrono::high_resolution_clock::now();
     
-    for (int i = 0; i < win_size_; i++) {
+    for (int i = 0; i < win_size_ * 2; i++) {
       counter_mut_.lock();
       commit_counter_++;
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
@@ -76,8 +76,8 @@ class Master {
 //      std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + view_->hostname();
       std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + view_->hostname();
       LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
-//      captain_->commit(value);
-      pool_->schedule(boost::bind(&Master::commit_thread, this, value));
+      captain_->commit(value);
+//      pool_->schedule(boost::bind(&Master::commit_thread, this, value));
       LOG_INFO(" +++++++++++ ZERO FINISH Commit Value: %s +++++++++++", value.c_str());
 
 //      LOG_INFO("COMMIT DONE***********************************************************************");
@@ -98,7 +98,7 @@ class Master {
       LOG_INFO("count_latency triggered! but this is a command slot_id : %llu commit_counter_ : %llu ", slot_id, commit_counter_);
       return;
     }
-    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
+//    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
 
     auto finish = std::chrono::high_resolution_clock::now();
     counter_mut_.lock();
@@ -183,8 +183,10 @@ int main(int argc, char** argv) {
   int total = stoi(argv[5]);
   
   Master master(my_id, node_num, value_size, win_size, total);
+  sleep(2);
+  LOG_INFO("Start Committing");
   master.start_commit();
-  master.attach();
+//  master.attach();
 //  master.commo_->start();
 
   LOG_INFO("I'm sleeping for 10000");

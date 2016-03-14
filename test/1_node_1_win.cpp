@@ -52,7 +52,7 @@ class Master {
 //    captain_->set_callback(callback);
 //    captain_->set_callback(callback_full);
 
-    commo_ = new Commo(captain_, *view_);
+    commo_ = new Commo(captain_, *view_, 0);
     captain_->set_commo(commo_);
 
   }

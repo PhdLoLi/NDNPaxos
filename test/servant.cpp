@@ -47,7 +47,7 @@ class Servant {
     callback_latency_t call_latency = boost::bind(&Servant::count_latency, this, _1, _2, _3);
 //    callback_full_t callback_full = bind(&Servant::count_exe_latency, this, _1, _2, _3);
     captain_ = new Captain(*view_, 1);
-    commo_ = new Commo(captain_, *view_);
+    commo_ = new Commo(captain_, *view_, 1);
     captain_->set_commo(commo_);
 
     captain_->set_callback(call_latency);
@@ -103,7 +103,8 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   
   Servant servant(my_id, node_num);
-  servant.attach();
+  sleep(2);
+//  servant.attach();
 
 
   LOG_INFO("I'm sleeping for 10000");

@@ -540,8 +540,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 //              tocommit_values_mutex_.unlock();
               proposers_mutex_.unlock();
             // DECIDE Progress to help others fast learning
-             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
-             commo_->broadcast_msg(msg_dec, DECIDE);
+//             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+//             commo_->broadcast_msg(msg_dec, DECIDE);
 
             } else {
 
@@ -562,8 +562,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               proposers_mutex_.unlock();
   
              // DECIDE Progress to help others fast learning
-              MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
-              commo_->broadcast_msg(msg_dec, DECIDE);
+//              MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+//              commo_->broadcast_msg(msg_dec, DECIDE);
   
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
 
@@ -593,9 +593,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
             proposers_mutex_.unlock();
 
-            MsgDecide *msg_dec = msg_decide(slot_id);
-
-            commo_->broadcast_msg(msg_dec, DECIDE);
+//            MsgDecide *msg_dec = msg_decide(slot_id);
+//
+//            commo_->broadcast_msg(msg_dec, DECIDE);
 //            new_slot(init_value, try_time, slot_id);
             LOG_INFO_CAP("Recommit the same (value):%s try_time :%d!!!", init_value->data().c_str(), try_time);
             commo_->broadcast_msg(msg_pre, PREPARE);

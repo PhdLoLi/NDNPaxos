@@ -13,14 +13,15 @@
 #include <google/protobuf/text_format.h>
 #include <boost/thread/mutex.hpp>
 #include <boost/thread/condition.hpp>
+#include "threadpool.hpp" 
 
+using namespace boost::threadpool;
 namespace ndnpaxos {
 class View;
 class Captain;
-//class pool;
 class Commo {
  public:
-  Commo(Captain *captain, View &view);
+  Commo(Captain *captain, View &view, int role);
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t);
@@ -42,18 +43,21 @@ class Commo {
   void onData(const ndn::Interest& interest, const ndn::Data& data); 
   void onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack); 
   void onTimeout(const ndn::Interest& interest, int& resendTimes);
-  void consume(ndn::Name name);
+  void consume(ndn::Name& name);
 
   void deal_msg(std::string &msg_str, ndn::Name &dataName); 
   void deal_nack(std::string &msg_str); 
+  
+  void handle_myself(google::protobuf::Message *msg, MsgType msg_type);
 
   Captain *captain_;
   View *view_;
-//  pool *pool_;
+  pool *pool_;
+  pool *win_pool_;
 
   // for NDN
   ndn::shared_ptr<ndn::Face> face_;
-  ndn::unique_ptr<ndn::Scheduler> scheduler_;// scheduler
+//  ndn::unique_ptr<ndn::Scheduler> scheduler_;// scheduler
   std::vector<ndn::Name> consumer_names_;
   ndn::KeyChain keyChain_;
 

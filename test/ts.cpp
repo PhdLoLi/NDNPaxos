@@ -37,8 +37,9 @@ public:
     interest.setInterestLifetime(ndn::time::milliseconds(1000));
     interest.setMustBeFresh(true);
     face_->expressInterest(interest,
-                           std::bind(&TS::onData, this,  _1, _2),
-                           std::bind(&TS::onTimeout, this, _1, 0));
+                           bind(&TS::onData, this,  _1, _2),
+                           bind(&TS::onNack, this,  _1, _2),
+                           bind(&TS::onTimeout, this, _1, 0));
     std::cerr << "Consumer Sending I " << interest.getName() << std::endl;
   }
 
@@ -89,6 +90,17 @@ private:
     }
   }
 
+  void onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
+    std::cerr << ndn::time::steady_clock::now() << " Consumer Nack " << interest.getName().toUri() << std::endl;
+  //  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
+    ndn::name::Component request = interest.getName().get(-1);
+    const uint8_t* value = request.value();
+    size_t size = request.value_size();
+    std::string msg_str(value, value + size);
+    
+  
+  }
+
   void onTimeout(const ndn::Interest& interest, int& resendTimes) {
     std::cerr << ndn::time::steady_clock::now() << " Consumer Timeout " << interest.getName().toUri() << " count " << resendTimes << std::endl;
 
@@ -96,6 +108,7 @@ private:
       ndn::Interest interest_new(interest);
       face_->expressInterest(interest_new,
                              bind(&TS::onData, this,  _1, _2),
+                             bind(&TS::onNack, this,  _1, _2),
                              bind(&TS::onTimeout, this, _1, resendTimes + 1));
     }
   }

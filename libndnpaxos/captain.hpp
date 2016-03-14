@@ -180,6 +180,8 @@ class Captain {
 
   void master_change(PropValue *);
 
+  int win_size();
+
  private:
 
   View *view_;

@@ -22,7 +22,7 @@ DBManager::DBManager(node_id_t node_id, node_id_t node_num, int win_size)
   captain_ = new Captain(*view_, win_size_);
   captain_->set_callback(call_latency);
   captain_->set_callback(callback_exe_latency);
-  commo_ = new Commo(captain_, *view_);
+  commo_ = new Commo(captain_, *view_, 0);
   captain_->set_commo(commo_);
   callback_ = callback_db; 
 

@@ -12,11 +12,11 @@
 
 namespace ndnpaxos {
 
-Commo::Commo(Captain *captain, View &view) 
+Commo::Commo(Captain *captain, View &view, int role) 
   : captain_(captain), view_(&view), reg_ok_(false) {
 
   face_ = ndn::make_shared<ndn::Face>();
-  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
+//  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
@@ -28,15 +28,17 @@ Commo::Commo(Captain *captain, View &view)
     LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
 
-  LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
-  face_->setInterestFilter(consumer_names_[view_->whoami()],
-                        bind(&Commo::onInterest, this, _1, _2),
-                        bind(&Commo::onRegisterSucceed, this, _1),
-                        bind(&Commo::onRegisterFailed, this, _1, _2));
-//  boost::thread listen(boost::bind(&Commo::start, this));
+  if (role <= 1) { 
+    LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
+    face_->setInterestFilter(consumer_names_[view_->whoami()],
+                          bind(&Commo::onInterest, this, _1, _2),
+                          bind(&Commo::onRegisterSucceed, this, _1),
+                          bind(&Commo::onRegisterFailed, this, _1, _2));
+  }
+  boost::thread listen(boost::bind(&Commo::start, this));
   pool_ = new pool(1);
   std::cout << "win_size_ " << captain_->win_size() << std::endl;
-//  win_pool_ = new pool(captain_->win_size());
+  win_pool_ = new pool(captain_->win_size());
 }
 
 Commo::~Commo() {
@@ -74,9 +76,8 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
     
     if (i == view_->whoami()) {
-      pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
-//      scheduler_->scheduleEvent(ndn::time::milliseconds(0),
-//                             bind(&Captain::handle_msg, captain_, msg, msg_type));
+//      pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
+      captain_->handle_msg(msg, msg_type);
       LOG_DEBUG_COM("Broadcast to myself %d (msg_type):%s", i, msg_type_str[msg_type].c_str());
       continue;
     }
@@ -154,6 +155,7 @@ void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& i
   size_t size = request.value_size();
   std::string msg_str(value, value + size);
 
+//  pool_->schedule(boost::bind(&Commo::deal_msg, this, msg_str, dataName));
   deal_msg(msg_str, dataName);
 }
 
@@ -256,18 +258,19 @@ void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {
   size_t size = data.getContent().value_size();
   std::string value_str(value, value + size);
   LOG_TRACE_COM("Consumer onData get");
+//  pool_->schedule(boost::bind(&Commo::deal_msg, this, value_str, dataName));
   deal_msg(value_str, dataName);
 }
 
 void Commo::onNack(const ndn::Interest& interest, const ndn::lp::Nack& nack) {
 //  std::cerr << ndn::time::steady_clock::now() << " Consumer Nack " << interest.getName().toUri() << std::endl;
 //  LOG_DEBUG_COM("Consumer NACK %s", interest.getName().toUri().c_str());
-  ndn::name::Component request = interest.getName().get(-1);
-  const uint8_t* value = request.value();
-  size_t size = request.value_size();
-  std::string msg_str(value, value + size);
-  
-  deal_nack(msg_str);
+//  ndn::name::Component request = interest.getName().get(-1);
+//  const uint8_t* value = request.value();
+//  size_t size = request.value_size();
+//  std::string msg_str(value, value + size);
+//  
+//  deal_nack(msg_str);
 
 }
 
