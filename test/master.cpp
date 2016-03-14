@@ -68,7 +68,7 @@ class Master {
 
     start_ = std::chrono::high_resolution_clock::now();
     
-    for (int i = 0; i < win_size_ * 2; i++) {
+    for (int i = 0; i < win_size_; i++) {
       counter_mut_.lock();
       commit_counter_++;
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
@@ -116,7 +116,7 @@ class Master {
     slot_id_t counter_tmp = commit_counter_;
     counter_mut_.unlock();
 
-    if (counter_tmp <= total_ * 1) {
+    if (counter_tmp <= total_) {
   //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
       if (counter_tmp % 10 == 0) {
         auto finish = std::chrono::high_resolution_clock::now();
@@ -124,6 +124,7 @@ class Master {
         start_ = std::chrono::high_resolution_clock::now();
         int throughput = 10 * 1000 / period;
         LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
+        LOG_INFO("value_id = %d periods[%d] = %d", value_id, periods_.size() - 1, periods_[periods_.size() - 1]);
         throughputs_.push_back(throughput);
       }
 //      std::cout << "master want to commit Value: " << value << std::endl;

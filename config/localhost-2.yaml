@@ -1,0 +1,18 @@
+db: 
+  path: /Users/lijing/ndndb
+  name: gintama.db 
+prefix: /ndn/thu/paxos 
+host:
+  - name: node0
+    addr: localhost
+  - name: node1
+    addr: localhost
+lease:
+  master_id: 0
+  period: 1000
+rs:
+  x: 2
+  n: 2
+  qr: 2 
+  qw: 2
+  f: 0

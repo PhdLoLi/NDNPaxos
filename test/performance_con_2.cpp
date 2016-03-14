@@ -13,6 +13,9 @@
 #include <unistd.h>
 #include <string>
 #include <stdlib.h>
+#include "threadpool.hpp" 
+
+using namespace boost::threadpool;
 
 class Consumer {
  public:
@@ -23,7 +26,8 @@ class Consumer {
     prefix_.append(node_name);
 
     face_ = ndn::make_shared<ndn::Face>();
-    boost::thread listen(boost::bind(&Consumer::attach, this));
+    pool_ = new pool(win_size);
+//    boost::thread listen(boost::bind(&Consumer::attach, this));
   }
 
   void attach() {
@@ -39,14 +43,14 @@ class Consumer {
     for (int i = 0; i < total_; i++) {
 
       std::string value = "Commiting Value Time_" + std::to_string(i) + " from " + node_name_;
-      std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
+//      std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
 //      LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
       starts_[i] = std::chrono::high_resolution_clock::now(); 
       ndn::Name new_name(prefix_);
       new_name.appendNumber(i);
+//      pool_->schedule(boost::bind(&Consumer::consume, this, new_name));
       consume(new_name);
-      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
-      usleep(200000);
+//      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
 //      LOG_INFO(" +++++++++++ ZERO FINISH Commit Value: %s +++++++++++", value.c_str());
 
     }
@@ -61,7 +65,7 @@ class Consumer {
                            bind(&Consumer::onTimeout, this, _1));
 //    LOG_INFO_COM("Consumer Sending %s Finish", interest.getName().toUri().c_str());
     // processEvents will block until the requested data received or timeout occurs
-  //  face_->processEvents();
+    face_->processEvents();
   }
 
  private:
@@ -116,6 +120,7 @@ class Consumer {
   std::vector<std::chrono::high_resolution_clock::time_point> starts_;
   
   std::chrono::high_resolution_clock::time_point start_;
+  pool *pool_;
 };
 
 int main(int argc, char** argv) {

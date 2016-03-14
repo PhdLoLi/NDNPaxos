@@ -25,15 +25,18 @@ class Consumer {
 
     prefix_.append(node_name);
 
-    face_ = ndn::make_shared<ndn::Face>();
+    for (int i = 0; i < win_size; i++) {
+      faces_.push_back(ndn::make_shared<ndn::Face>());
 //    pool_ = new pool(win_size);
-    boost::thread listen(boost::bind(&Consumer::attach, this));
+      boost::thread listen(boost::bind(&Consumer::attach, this, i));
+    }
   }
 
-  void attach() {
-//    LOG_INFO("Consumer attached!");
-    face_->getIoService().run();
-//    LOG_INFO("Consumer attach Finished?!");
+  void attach(int i) {
+    printf("Consumer %d attached!\n", i);
+//    face_->getIoService().run();
+      faces_[i]->getIoService().run();
+    printf("Consumer %d attach Finished?!", i);
   }
 
   void start_consume() {
@@ -45,24 +48,25 @@ class Consumer {
       
       ndn::Name new_name(prefix_);
       counter_mut_.lock();
+      int counter = commit_counter_;
       std::string value =  std::to_string(commit_counter_) + " from " + node_name_;
       std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
       new_name.appendNumber(commit_counter_);
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
       commit_counter_++;
       counter_mut_.unlock();
-      consume(new_name);
+      consume(new_name, counter % win_size_);
 //      usleep(20000);
 //      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
 
     }
   }
 
-  void consume(ndn::Name name) {
+  void consume(ndn::Name name, int counter) {
     ndn::Interest interest(name);
     interest.setInterestLifetime(ndn::time::milliseconds(1000));
     interest.setMustBeFresh(true);
-    face_->expressInterest(interest,
+    faces_[counter]->expressInterest(interest,
                            bind(&Consumer::onData, this,  _1, _2),
                            bind(&Consumer::onTimeout, this, _1));
 //    LOG_INFO_COM("Consumer Sending %s Finish", interest.getName().toUri().c_str());
@@ -77,7 +81,7 @@ class Consumer {
 //    size_t size = data.getContent().value_size();
 //    std::string value_str(value, value + size);
     int req_num = interest.getName().get(-1).toNumber();
-//    printf("Consumer onData ACK Number: %d\n", req_num);
+    printf("Consumer onData ACK Number: %d\n", req_num);
 
     auto finish = std::chrono::high_resolution_clock::now();
     periods_[req_num] = (std::chrono::duration_cast<std::chrono::nanoseconds>
@@ -103,12 +107,13 @@ class Consumer {
     counter_mut_.lock();
     if (commit_counter_ < total_) {
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
+      int counter = commit_counter_;
       std::string value = std::to_string(commit_counter_) + " from " + node_name_;
 //      std::cout << "Start commit +++++++++++ " << value << std::endl;
       new_name.appendNumber(commit_counter_);
       commit_counter_++;
       counter_mut_.unlock();
-      consume(new_name);
+      consume(new_name, counter % win_size_);
     } else {
 //      printf("commit_counter %d Finish!!!!!!!!!!!!!\n", commit_counter_);
       commit_counter_++;
@@ -120,7 +125,7 @@ class Consumer {
 //    LOG_DEBUG_COM("Consumer Timeout %s", interest.getName().toUri().c_str());
   }
 
-  ndn::shared_ptr<ndn::Face> face_;
+  std::vector<ndn::shared_ptr<ndn::Face>> faces_;
   ndn::Name prefix_;
   ndn::KeyChain keyChain_;
 
