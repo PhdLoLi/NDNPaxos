@@ -19,12 +19,11 @@ using namespace boost::threadpool;
 
 class Consumer {
  public:
-  Consumer(std::string node_name, ndn::Name prefix, int win_size, int total)
-    : node_name_(node_name), prefix_(prefix), win_size_(win_size), total_(total), 
-      commit_counter_(0), thr_counter_(0),  starts_(total), periods_(total) {
+  Consumer(ndn::Name prefix, int total)
+    : prefix_(prefix), total_(total), 
+      commit_counter_(0), thr_counter_(0), starts_(total), periods_(total) {
 
-    prefix_.append(node_name);
-
+//    prefix_.append("node_" + std::to_string(to_node_id));
     face_ = ndn::make_shared<ndn::Face>();
 //    pool_ = new pool(win_size);
     boost::thread listen(boost::bind(&Consumer::attach, this));
@@ -36,26 +35,30 @@ class Consumer {
 //    LOG_INFO("Consumer attach Finished?!");
   }
 
+  void clock_start() {
+    start_ = std::chrono::high_resolution_clock::now();
+  }
+
+  void clock_starts() {
+      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
+  }
+
+  void update_commit_counter() {
+    commit_counter_++;
+  }
+
+  void counter_lock() {
+    counter_mut_.lock();
+  }
+
+  void counter_unlock() {
+    counter_mut_.unlock();
+  }
+
   void start_consume() {
 
-    start_ = std::chrono::high_resolution_clock::now();
-    
-
-    for (int i = 0; i < win_size_; i++) {
-      
-      ndn::Name new_name(prefix_);
-      counter_mut_.lock();
-      std::string value =  std::to_string(commit_counter_) + " from " + node_name_;
-      std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
-      new_name.appendNumber(commit_counter_);
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
-      commit_counter_++;
-      counter_mut_.unlock();
-      consume(new_name);
-//      usleep(20000);
-//      std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
-
-    }
+//    usleep(20000);
+//    std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
   }
 
   void consume(ndn::Name name) {
@@ -86,10 +89,10 @@ class Consumer {
     thr_mut_.lock();
     thr_counter_++;
 
-    if (thr_counter_ % 10 == 0) {
+    if (thr_counter_ % 10000 == 0) {
       auto finish = std::chrono::high_resolution_clock::now();
       uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
-      int throughput = 10 * 1000 / period;
+      int throughput = 10000 * 1000 / period;
       printf("onData -- counter:%d milliseconds:%llu throughput:%d", thr_counter_, period, throughput);
       printf("   periods[%d] = %d thr_counter = %d\n", req_num, periods_[req_num], thr_counter_);
       throughputs_.push_back(throughput);
@@ -103,7 +106,7 @@ class Consumer {
     counter_mut_.lock();
     if (commit_counter_ < total_) {
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
-      std::string value = std::to_string(commit_counter_) + " from " + node_name_;
+      std::string value = std::to_string(commit_counter_);
 //      std::cout << "Start commit +++++++++++ " << value << std::endl;
       new_name.appendNumber(commit_counter_);
       commit_counter_++;
@@ -122,47 +125,63 @@ class Consumer {
 
   ndn::shared_ptr<ndn::Face> face_;
   ndn::Name prefix_;
-  ndn::KeyChain keyChain_;
-
-  std::string node_name_;
 
   int win_size_;
   int total_;
+
   uint64_t commit_counter_;
   uint64_t thr_counter_;
 
   boost::mutex counter_mut_;
   boost::mutex thr_mut_;
   
+  std::vector<std::chrono::high_resolution_clock::time_point> starts_;
   std::vector<uint64_t> periods_;
   std::vector<uint64_t> throughputs_;
-  std::vector<std::chrono::high_resolution_clock::time_point> starts_;
   
   std::chrono::high_resolution_clock::time_point start_;
 };
 
 int main(int argc, char** argv) {
 
-  if (argc < 5) {
-    std::cout << "Usage: my_node_id to_node_id win_size total" << std::endl;
+  if (argc < 4) {
+    std::cout << "Usage: to_node_range win_size total" << std::endl;
     return 0;
   }
 
-  std::string my_node_name = "node_" + std::string(argv[1]);
-  std::string to_node_name = "node_" + std::string(argv[2]);
-  int win_size = std::stoi(argv[3]);
-  int total = std::stoi(argv[4]);
+  int to_node_range = std::stoi(argv[1]);
+//  std::string to_node_name = "node_" + std::string(argv[1]);
+  int win_size = std::stoi(argv[2]);
+  int total = std::stoi(argv[3]);
   
-  ndn::Name to_name("haha");
-  to_name.append(to_node_name);
 
-  Consumer consumer(my_node_name, to_name, win_size, total);
+  std::vector<Consumer *> consumers;
+
+  for (int i =  0; i < to_node_range; i++) {
+    ndn::Name to_name("haha");
+    to_name.append("node_" + std::to_string(i));
+    consumers.push_back(new Consumer(to_name, total));
+  }
 
   std::cout << "Start 2 seconds warming up ..." << std::endl;
   sleep(2);
   std::cout << "After 2 seconds warming up, start commiting ..." << std::endl;
-  consumer.start_consume();
+//  consumer.start_consume();
 
+  for (int i = 0; i < win_size_; i++) {
+    for (j = 0; j < to_node_range; j++) {
+      ndn::Name new_name(prefix);
+      new_name.append("node_" + std::to_string(j));
+      counter_mut_.lock();
+      std::string value =  std::to_string(commit_counter_) + " from " + node_name_;
+      std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
+      new_name.appendNumber(commit_counter_);
+      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
+      commit_counter_++;
+      counter_mut_.unlock();
+      consume(new_name);
+    }
+  }
   std::cout << "Main thread sleeping ..." << std::endl;
   sleep(10000000);
 

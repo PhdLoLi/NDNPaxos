@@ -13,7 +13,9 @@
 #include <string>
 #include <stdlib.h>
 #include <chrono>
+#include "threadpool.hpp" 
 
+using namespace boost::threadpool;
 class Producer {
  public:
   Producer(ndn::Name prefix) {
@@ -23,6 +25,7 @@ class Producer {
                             ndn::RegisterPrefixSuccessCallback(),
                             bind(&Producer::onRegisterFailed, this, _1, _2));
     boost::thread listen(boost::bind(&Producer::attach, this));
+//    pool_ = new pool(1);
   }
 
   void attach() {
@@ -32,7 +35,8 @@ class Producer {
  private:
 
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
-//    std::cout << "Producer I: " << interest.getName() << std::endl;
+    //std::cout << "Producer I: " << interest.getName() << std::endl;
+
     // Create new name, based on Interest's name
     ndn::Name dataName(interest.getName());
   
@@ -49,14 +53,21 @@ class Producer {
     data->setName(dataName);
     data->setFreshnessPeriod(ndn::time::seconds(10));
     data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
-  
-    // Sign Data packet with default identity
-    keyChain_.sign(*data);
-    // Return Data packet to the requester
+//    pool_->schedule(boost::bind(&Producer::sign_thread, this, data));
+    keyChain_.signWithSha256(*data);
     face_->put(*data);
-  
+//    sign_thread(data);
   }
   
+  void sign_thread(ndn::shared_ptr<ndn::Data> data) {
+    // Sign Data packet with default identity
+//    keyChain_.sign(*data);
+    keyChain_.signWithSha256(*data);
+    // Return Data packet to the requester
+    face_->put(*data);
+    std::cout << "Producer Signing Done!!! " << std::endl;
+  }
+
   void onRegisterFailed(const ndn::Name& prefix, const std::string& reason) {
     std::cerr << "ERROR: Failed to register prefix \""
               << prefix << "\" in local hub's daemon (" << reason << ")"
@@ -67,6 +78,7 @@ class Producer {
   ndn::shared_ptr<ndn::Face> face_;
   ndn::Name prefix_;
   ndn::KeyChain keyChain_;
+  pool *pool_;
 };
 
 int main(int argc, char** argv) {

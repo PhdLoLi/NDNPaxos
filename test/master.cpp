@@ -118,11 +118,11 @@ class Master {
 
     if (counter_tmp <= total_) {
   //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
-      if (counter_tmp % 10 == 0) {
+      if (counter_tmp % 1000 == 0) {
         auto finish = std::chrono::high_resolution_clock::now();
         uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
         start_ = std::chrono::high_resolution_clock::now();
-        int throughput = 10 * 1000 / period;
+        int throughput = 1000 * 1000 / period;
         LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
         LOG_INFO("value_id = %d periods[%d] = %d", value_id, periods_.size() - 1, periods_[periods_.size() - 1]);
         throughputs_.push_back(throughput);

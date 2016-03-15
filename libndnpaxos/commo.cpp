@@ -103,7 +103,8 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
   data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
 
   // Sign Data packet with default identity
-  keyChain_.sign(*data);
+  // keyChain_.sign(*data);
+  keyChain_.signWithSha256(*data);
 
   // Return Data packet to the requester
 //  std::cout << ">>Producer D: " << *data << std::endl;
