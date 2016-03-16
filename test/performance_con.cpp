@@ -39,26 +39,15 @@ class Consumer {
     start_ = std::chrono::high_resolution_clock::now();
   }
 
-  void clock_starts() {
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
-  }
-
-  void update_commit_counter() {
-    commit_counter_++;
-  }
-
-  void counter_lock() {
+  void consume() {
+    ndn::Name new_name(prefix_);
     counter_mut_.lock();
-  }
-
-  void counter_unlock() {
+    std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << commit_counter_ << std::endl;
+    new_name.appendNumber(commit_counter_);
+    starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
+    commit_counter_++;
     counter_mut_.unlock();
-  }
-
-  void start_consume() {
-
-//    usleep(20000);
-//    std::cout << " +++++++++++ ZERO Finish Commit Value: %s +++++++++++ " << value << std::endl;
+    consume(new_name);
   }
 
   void consume(ndn::Name name) {
@@ -153,6 +142,7 @@ int main(int argc, char** argv) {
 //  std::string to_node_name = "node_" + std::string(argv[1]);
   int win_size = std::stoi(argv[2]);
   int total = std::stoi(argv[3]);
+  std::vector<ndn::Name> prefixs;
   
 
   std::vector<Consumer *> consumers;
@@ -160,6 +150,7 @@ int main(int argc, char** argv) {
   for (int i =  0; i < to_node_range; i++) {
     ndn::Name to_name("haha");
     to_name.append("node_" + std::to_string(i));
+    prefixs.push_back(to_name);
     consumers.push_back(new Consumer(to_name, total));
   }
 
@@ -168,18 +159,12 @@ int main(int argc, char** argv) {
   std::cout << "After 2 seconds warming up, start commiting ..." << std::endl;
 //  consumer.start_consume();
 
-  for (int i = 0; i < win_size_; i++) {
-    for (j = 0; j < to_node_range; j++) {
-      ndn::Name new_name(prefix);
-      new_name.append("node_" + std::to_string(j));
-      counter_mut_.lock();
-      std::string value =  std::to_string(commit_counter_) + " from " + node_name_;
-      std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << value << std::endl;
-      new_name.appendNumber(commit_counter_);
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
-      commit_counter_++;
-      counter_mut_.unlock();
-      consume(new_name);
+  for (int i = 0; i < win_size; i++) {
+    for (int j = 0; j < to_node_range; j++) {
+      if (i == 0) {
+        consumers[j]->clock_start();
+      }
+      consumers[j]->consume();
     }
   }
   std::cout << "Main thread sleeping ..." << std::endl;
