@@ -15,10 +15,9 @@
 #include <chrono>
 #include "threadpool.hpp" 
 
-using namespace boost::threadpool;
 class Producer {
  public:
-  Producer(ndn::Name prefix) {
+  Producer(ndn::Name prefix) : prefix_(prefix) {
     face_ = ndn::make_shared<ndn::Face>();
     face_->setInterestFilter(prefix,
                             bind(&Producer::onInterest, this, _1, _2),
@@ -29,29 +28,52 @@ class Producer {
   }
 
   void attach() {
+//    std::cout << "attach starting ..." << std::endl;
     face_->getIoService().run();
+  }
+
+  void produce() {
+    std::cout << "start producing" << std::endl;
+    start_ = std::chrono::high_resolution_clock::now();
+    int total = 100000;
+    for (int i = 0; i < total; i ++) {
+      // Create new name, based on Interest's name
+      ndn::Name dataName(prefix_);
+      dataName.append(std::to_string(i));
+//      dataName.appendNumber(i);
+  
+      static const std::string content = "HELLO WORLD";
+  
+      // Create Data packet
+      ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
+      data->setName(dataName);
+      data->setFreshnessPeriod(ndn::time::seconds(100));
+      data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
+//      pool_->schedule(boost::bind(&Producer::sign_thread, this, data));
+      keyChain_.signWithSha256(*data);
+      face_->put(*data);
+
+    }
+    auto finish = std::chrono::high_resolution_clock::now();
+    uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
+    int throughput = total * 1000 / period;
+    printf("produce finished -- counter:%d milliseconds:%llu throughput:%d\n", total, period, throughput);
   }
 
  private:
 
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
-    //std::cout << "Producer I: " << interest.getName() << std::endl;
+//    std::cout << "Producer I: " << interest.getName() << std::endl;
 
     // Create new name, based on Interest's name
     ndn::Name dataName(interest.getName());
   
-    ndn::name::Component request = interest.getName().get(-1);
-    const uint8_t* value = request.value();
-    size_t size = request.value_size();
-    std::string msg_str(value, value + size);
-    
-  
-    static const std::string content = "HELLO KITTY";
+    static const std::string content = "HELLO WORLD";
   
     // Create Data packet
     ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
     data->setName(dataName);
-    data->setFreshnessPeriod(ndn::time::seconds(10));
+    data->setFreshnessPeriod(ndn::time::seconds(100));
     data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
 //    pool_->schedule(boost::bind(&Producer::sign_thread, this, data));
     keyChain_.signWithSha256(*data);
@@ -78,7 +100,8 @@ class Producer {
   ndn::shared_ptr<ndn::Face> face_;
   ndn::Name prefix_;
   ndn::KeyChain keyChain_;
-  pool *pool_;
+//  pool *pool_;
+  std::chrono::high_resolution_clock::time_point start_;
 };
 
 int main(int argc, char** argv) {
@@ -89,14 +112,16 @@ int main(int argc, char** argv) {
   }
 
   std::string my_node_name = "node_" + std::string(argv[1]);
-  ndn::Name prefix("haha");
+  ndn::Name prefix("hehe");
   prefix.append(my_node_name);
 
   Producer producer(prefix);
+//
+//  producer.produce();
 
+//  producer.attach();
   std::cout << ("Main thread sleeping ...") << std::endl;
   sleep(10000000);
-//  producer.attach();
 
   return 0;
 }

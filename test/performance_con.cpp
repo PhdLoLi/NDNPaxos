@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <string>
 #include <stdlib.h>
+#include <chrono>
 #include "threadpool.hpp" 
 
 using namespace boost::threadpool;
@@ -42,8 +43,8 @@ class Consumer {
   void consume() {
     ndn::Name new_name(prefix_);
     counter_mut_.lock();
-    std::cout << " +++++++++++ ZERO Init Commit Value: %s +++++++++++ " << commit_counter_ << std::endl;
-    new_name.appendNumber(commit_counter_);
+    std::cout << " +++++++++++ ZERO Init Commit Value:  +++++++++++ " << commit_counter_ << std::endl;
+    new_name.append(std::to_string(commit_counter_));
     starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
     commit_counter_++;
     counter_mut_.unlock();
@@ -68,7 +69,7 @@ class Consumer {
 //    const uint8_t* value = data.getContent().value();
 //    size_t size = data.getContent().value_size();
 //    std::string value_str(value, value + size);
-    int req_num = interest.getName().get(-1).toNumber();
+    int req_num = std::stoi(interest.getName().get(-1).toUri());
 //    printf("Consumer onData ACK Number: %d\n", req_num);
 
     auto finish = std::chrono::high_resolution_clock::now();
@@ -78,10 +79,11 @@ class Consumer {
     thr_mut_.lock();
     thr_counter_++;
 
-    if (thr_counter_ % 10000 == 0) {
+    int stage = 10000;
+    if (thr_counter_ % stage == 0) {
       auto finish = std::chrono::high_resolution_clock::now();
       uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
-      int throughput = 10000 * 1000 / period;
+      int throughput = stage * 1000 / period;
       printf("onData -- counter:%d milliseconds:%llu throughput:%d", thr_counter_, period, throughput);
       printf("   periods[%d] = %d thr_counter = %d\n", req_num, periods_[req_num], thr_counter_);
       throughputs_.push_back(throughput);
@@ -97,7 +99,8 @@ class Consumer {
       starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
       std::string value = std::to_string(commit_counter_);
 //      std::cout << "Start commit +++++++++++ " << value << std::endl;
-      new_name.appendNumber(commit_counter_);
+//      new_name.appendNumber(commit_counter_);
+      new_name.append(std::to_string(commit_counter_));
       commit_counter_++;
       counter_mut_.unlock();
       consume(new_name);
@@ -148,7 +151,7 @@ int main(int argc, char** argv) {
   std::vector<Consumer *> consumers;
 
   for (int i =  0; i < to_node_range; i++) {
-    ndn::Name to_name("haha");
+    ndn::Name to_name("hehe");
     to_name.append("node_" + std::to_string(i));
     prefixs.push_back(to_name);
     consumers.push_back(new Consumer(to_name, total));

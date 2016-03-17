@@ -30,7 +30,8 @@ class Master {
       value_size_(value_size), win_size_(win_size), total_(total),
       commit_counter_(0), starts_(total) {
 
-    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
+//    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
+    std::string config_file = "config/localhost-" + to_string(node_num_) + ".yaml";
 
     // init view_ for one captain_
     view_ = new View(my_id_, config_file);
@@ -98,7 +99,7 @@ class Master {
       LOG_INFO("count_latency triggered! but this is a command slot_id : %llu commit_counter_ : %llu ", slot_id, commit_counter_);
       return;
     }
-//    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
+    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
 
     auto finish = std::chrono::high_resolution_clock::now();
     counter_mut_.lock();
@@ -118,11 +119,11 @@ class Master {
 
     if (counter_tmp <= total_) {
   //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
-      if (counter_tmp % 1000 == 0) {
+      if (counter_tmp % 10000 == 0) {
         auto finish = std::chrono::high_resolution_clock::now();
         uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
         start_ = std::chrono::high_resolution_clock::now();
-        int throughput = 1000 * 1000 / period;
+        int throughput = 10000 * 1000 / period;
         LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
         LOG_INFO("value_id = %d periods[%d] = %d", value_id, periods_.size() - 1, periods_[periods_.size() - 1]);
         throughputs_.push_back(throughput);

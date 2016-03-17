@@ -64,13 +64,13 @@ View::View(node_id_t node_id, std::string cf)
     std::string path = db["path"].as<std::string>();
     std::string db_name = db["name"].as<std::string>();
 	  boost::filesystem::path dir(path);
-    dir.append(host_nodes_[node_id_].name);
+    dir.append(host_nodes_[node_id_].name, boost::filesystem::path::codecvt());
     if(!boost::filesystem::exists(dir)) {
 	    if(boost::filesystem::create_directories(dir)) {
 //	    	std::cout << "Success" << "\n";
 	    }
     }
-    dir.append(db_name);
+    dir.append(db_name, boost::filesystem::path::codecvt());
     db_name_ = dir.string();
   }
 

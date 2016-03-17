@@ -25,6 +25,7 @@ def options(opt):
     opt.add_option('-d', '--debug', dest='debug', default=False, action='store_true')
     opt.add_option('-l', '--log', dest="log", default='', help='log level', action='store')
     opt.add_option('-m', '--mode', dest="mode", default='', help='mode type', action='store')
+    opt.add_option('-c', '--compiler', dest="compiler", default='', action="store")
 
 def configure(conf):
     conf.env['CXX'] = "clang++"

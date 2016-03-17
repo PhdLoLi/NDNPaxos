@@ -1,5 +1,5 @@
-db: 
-  path: /Users/lijing/ndndb
+db:
+  path: ndndb
   name: gintama.db 
 prefix: /ndn/thu/paxos 
 host:
