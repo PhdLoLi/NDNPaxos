@@ -47,8 +47,8 @@ Commo::~Commo() {
 void Commo::start() {
   try {
     LOG_INFO("processEvents attached!");
-  //  face_->processEvents();
-    face_->getIoService().run();
+    face_->processEvents();
+  //  face_->getIoService().run();
     LOG_INFO("processEvents attach Finished?!");
   }
   catch (const std::exception& e) {

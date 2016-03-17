@@ -6,14 +6,13 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
-#include <boost/thread.hpp>
-#include <boost/bind.hpp>
+//#include <boost/thread.hpp>
+//#include <boost/bind.hpp>
 
 #include <unistd.h>
 #include <string>
 #include <stdlib.h>
 #include <chrono>
-#include "threadpool.hpp" 
 
 class Producer {
  public:
@@ -23,13 +22,14 @@ class Producer {
                             bind(&Producer::onInterest, this, _1, _2),
                             ndn::RegisterPrefixSuccessCallback(),
                             bind(&Producer::onRegisterFailed, this, _1, _2));
-    boost::thread listen(boost::bind(&Producer::attach, this));
+//    boost::thread listen(boost::bind(&Producer::attach, this));
 //    pool_ = new pool(1);
   }
 
   void attach() {
-//    std::cout << "attach starting ..." << std::endl;
-    face_->getIoService().run();
+    std::cout << "attach starting ..." << std::endl;
+    face_->processEvents();
+//    face_->getIoService().run();
   }
 
   void produce() {
@@ -73,7 +73,7 @@ class Producer {
     // Create Data packet
     ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
     data->setName(dataName);
-    data->setFreshnessPeriod(ndn::time::seconds(100));
+    data->setFreshnessPeriod(ndn::time::seconds(0));
     data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
 //    pool_->schedule(boost::bind(&Producer::sign_thread, this, data));
     keyChain_.signWithSha256(*data);
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
 //
 //  producer.produce();
 
-//  producer.attach();
+  producer.attach();
   std::cout << ("Main thread sleeping ...") << std::endl;
   sleep(10000000);
 

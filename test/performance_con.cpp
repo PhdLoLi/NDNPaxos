@@ -32,7 +32,8 @@ class Consumer {
 
   void attach() {
 //    LOG_INFO("Consumer attached!");
-    face_->getIoService().run();
+    face_->processEvents();
+//    face_->getIoService().run();
 //    LOG_INFO("Consumer attach Finished?!");
   }
 
@@ -58,6 +59,7 @@ class Consumer {
     face_->expressInterest(interest,
                            bind(&Consumer::onData, this,  _1, _2),
                            bind(&Consumer::onTimeout, this, _1));
+//    std::cout << "Sending " << interest << std::endl;
 //    LOG_INFO_COM("Consumer Sending %s Finish", interest.getName().toUri().c_str());
     // processEvents will block until the requested data received or timeout occurs
 //    face_->processEvents();

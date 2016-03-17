@@ -33,7 +33,8 @@ class Consumer {
 
   void attach() {
 //    LOG_INFO("Consumer attached!");
-    face_->getIoService().run();
+//    face_->getIoService().run();
+    face_->processEvents();
 //    LOG_INFO("Consumer attach Finished?!");
   }
 

@@ -99,7 +99,7 @@ class Master {
       LOG_INFO("count_latency triggered! but this is a command slot_id : %llu commit_counter_ : %llu ", slot_id, commit_counter_);
       return;
     }
-    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
+//    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
 
     auto finish = std::chrono::high_resolution_clock::now();
     counter_mut_.lock();

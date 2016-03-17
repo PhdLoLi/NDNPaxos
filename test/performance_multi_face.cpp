@@ -36,7 +36,8 @@ class Consumer {
   void attach(int i) {
     printf("Consumer %d attached!\n", i);
 //    face_->getIoService().run();
-      faces_[i]->getIoService().run();
+      faces_[i]->processEvents();
+//      faces_[i]->getIoService().run();
     printf("Consumer %d attach Finished?!", i);
   }
 
