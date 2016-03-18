@@ -17,6 +17,7 @@
 #include <stdio.h>
 #include <algorithm>
 #include <boost/bind.hpp>
+#include <fstream>
 //#include <thread>
 
 namespace ndnpaxos {
@@ -25,13 +26,21 @@ using namespace std;
   
 class Master {
  public:
-  Master(node_id_t my_id, int node_num, int value_size, int win_size, int total) 
+  Master(node_id_t my_id, int node_num, int value_size, int win_size, int local) 
     : my_id_(my_id), node_num_(node_num), 
-      value_size_(value_size), win_size_(win_size), total_(total),
-      commit_counter_(0), starts_(total) {
+      value_size_(value_size), win_size_(win_size),
+      commit_counter_(0), thr_counter_(0), starts_(500000),
+      recording_(false), done_(false), local_(local) {
 
 //    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
-    std::string config_file = "config/localhost-" + to_string(node_num_) + ".yaml";
+
+    std::string tag;
+    if (local_ == 0)
+      tag = "localhost-";
+    else 
+      tag = "nodes-";
+
+    std::string config_file = "config/" + tag + to_string(node_num_) + ".yaml";
 
     // init view_ for one captain_
     view_ = new View(my_id_, config_file);
@@ -66,9 +75,14 @@ class Master {
   } 
 
   void start_commit() {
-
-    start_ = std::chrono::high_resolution_clock::now();
     
+    int warming = 2;
+    int interval = 3;
+    for (int i = 0; i < warming; i++) {
+      LOG_INFO("Warming Counting %d", i + 1);
+      sleep(1);
+    }
+
     for (int i = 0; i < win_size_; i++) {
       counter_mut_.lock();
       commit_counter_++;
@@ -83,6 +97,96 @@ class Master {
 
 //      LOG_INFO("COMMIT DONE***********************************************************************");
     }
+
+    for (int i = 0; i < interval; i++) {
+      LOG_INFO("Not Recording Counting %d", i + 1);
+      sleep(1);
+    }
+    LOG_INFO("%d s passed start punching", interval);
+
+    thr_mut_.lock();
+    recording_ = true;
+    thr_mut_.unlock();
+
+    uint64_t before = 0;
+    uint64_t throughput = 0;
+
+    for (int j = 0; j < interval * 4; j++) {
+      LOG_INFO("Time %d", j + 1);
+
+      thr_mut_.lock();
+      before = thr_counter_;
+      thr_mut_.unlock();
+
+      sleep(1);
+
+      thr_mut_.lock();
+      throughput = thr_counter_ - before; 
+
+      if (periods_.size() > 0) {
+        LOG_INFO("PUNCH!  -- counter:%lu second:1 throughput:%lu latency:%lu ns", thr_counter_, throughput, periods_[periods_.size() - 1]);
+      }
+      else {
+        LOG_INFO("PUNCH! -- counter:%lu second:1 throughput:%lu periods_.size() == 0", thr_counter_, throughput);
+      }
+
+      thr_mut_.unlock();
+      throughputs_.push_back(throughput);
+    }
+    
+    thr_mut_.lock();
+    recording_ = false;
+    done_ = true;
+    thr_mut_.unlock();
+
+    LOG_INFO("Last %d s period", interval);
+    for (int i = interval; i > 0; i--) {
+      LOG_INFO("Stop Committing Counting %d", i);
+      sleep(1);
+    }
+
+    commo_->stop();
+
+    std::ofstream file_throughput_;
+    std::ofstream file_latency_;
+    std::ofstream file_trytime_;
+    
+    LOG_INFO("Writing File Now!");
+
+    std::string thr_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    file_throughput_.open(thr_name);
+
+    std::string lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    file_latency_.open(lat_name);
+
+    std::string try_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    file_trytime_.open(try_name);
+
+    for (int i = 0; i < throughputs_.size(); i++) {
+      file_throughput_ << throughputs_[i] << "\n";
+    }
+
+    file_throughput_.close();
+
+    for (int j = 0; j < periods_.size(); j++) {
+      file_latency_ << periods_[j] << "\n";
+    }
+    file_latency_.close();
+
+    for (int j = 0; j < trytimes_.size(); j++) {
+      file_trytime_ << trytimes_[j] << "\n";
+    }
+    file_trytime_.close();
+
+    LOG_INFO("Writing File Finished!");
+
+    LOG_INFO("Last Last %d s period", warming);
+    for (int i = warming ; i > 0; i--) {
+      LOG_INFO("Cooling Counting %d", i);
+      sleep(1);
+    }
+
+    LOG_INFO("Over!!!");
   }
 
 
@@ -101,39 +205,26 @@ class Master {
     }
 //    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
 
-    auto finish = std::chrono::high_resolution_clock::now();
-    counter_mut_.lock();
-    commit_counter_++;
-    value_id_t value_id = prop_value.id() >> 16;
-    periods_.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>
-                     (finish-starts_[value_id % total_]).count());
-    trytimes_.push_back(try_time);
-  
-//    LOG_INFO("periods[%d] = %d", periods_.size() - 1, periods_[periods_.size() - 1]);
-//    LOG_INFO("trytimes[%d] = %d", trytimes_.size() - 1, trytimes_[trytimes_.size() - 1]);
-  
-    std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
-    starts_[commit_counter_ % total_] = std::chrono::high_resolution_clock::now();
-    slot_id_t counter_tmp = commit_counter_;
-    counter_mut_.unlock();
+    thr_mut_.lock();
+    if (recording_) {
+      value_id_t value_id = prop_value.id() >> 16;
+      auto finish = std::chrono::high_resolution_clock::now();
+      periods_.push_back(std::chrono::duration_cast<std::chrono::nanoseconds>
+                        (finish-starts_[value_id - 1]).count());
+      trytimes_.push_back(try_time);
+//      LOG_INFO("periods_.size() : %d thr_counter_ : %d periods_[thr_counter_] :%llu \n", periods_.size(), thr_counter_, periods_[thr_counter_]);
+      thr_counter_++;
+    }
+    thr_mut_.unlock();
 
-    if (counter_tmp <= total_) {
-  //    LOG_INFO("++++ I just Commit Value: %s ++++", value.c_str());
-      if (counter_tmp % 10000 == 0) {
-        auto finish = std::chrono::high_resolution_clock::now();
-        uint64_t period = std::chrono::duration_cast<std::chrono::milliseconds>(finish-start_).count();
-        start_ = std::chrono::high_resolution_clock::now();
-        int throughput = 10000 * 1000 / period;
-        LOG_INFO("Last_commit -- counter:%d milliseconds:%llu throughput:%d", counter_tmp, period, throughput);
-        LOG_INFO("value_id = %d periods[%d] = %d", value_id, periods_.size() - 1, periods_[periods_.size() - 1]);
-        throughputs_.push_back(throughput);
-      }
-//      std::cout << "master want to commit Value: " << value << std::endl;
-//      boost::thread commit_first(bind(&Master::commit_thread, this, value));
-//      LOG_INFO(" +++++++++++ Init Commit Value: %s +++++++++++", value.c_str());
+    if (done_ == false) {
+      counter_mut_.lock();
+      std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
+      starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
+  //    std::cout << "Start commit +++++++++++ " << value << std::endl;
+      commit_counter_++;
+      counter_mut_.unlock();
       captain_->commit(value);
-//      LOG_INFO(" +++++++++++ FINISH Commit Value: %s +++++++++++", value.c_str());
-//      std::cout << "master want to commit Value Finish: " << value << std::endl;
     }
 
   }
@@ -149,17 +240,20 @@ class Master {
   Commo *commo_;
   pool *pool_;
 
-  int total_;
   slot_id_t commit_counter_;
+  slot_id_t thr_counter_;
 
   boost::mutex counter_mut_;
+  boost::mutex thr_mut_;
   
   std::vector<uint64_t> periods_;
   std::vector<uint64_t> throughputs_;
   std::vector<int> trytimes_;
   std::vector<std::chrono::high_resolution_clock::time_point> starts_;
   
-  std::chrono::high_resolution_clock::time_point start_;
+  bool recording_;
+  bool done_;
+  int local_;
 };
 
 
@@ -174,7 +268,7 @@ int main(int argc, char** argv) {
  
 
   if (argc < 6) {
-    std::cerr << "Usage: Node_ID Node_Num Value_Size Window_Size Total_time" << std::endl;
+    std::cerr << "Usage: Node_ID Node_Num Value_Size Window_Size Local_orNot(0/1)" << std::endl;
     return 0;
   }
 
@@ -182,18 +276,11 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   int value_size = stoi(argv[3]);
   int win_size = stoi(argv[4]);
-  int total = stoi(argv[5]);
+  int local = stoi(argv[5]);
   
-  Master master(my_id, node_num, value_size, win_size, total);
-  sleep(2);
-  LOG_INFO("Start Committing");
+  Master master(my_id, node_num, value_size, win_size, local);
   master.start_commit();
-//  master.attach();
-//  master.commo_->start();
 
-  LOG_INFO("I'm sleeping for 10000");
-  sleep(100000000);
-  LOG_INFO("Master ALL DONE!");
 
   return 0;
 }

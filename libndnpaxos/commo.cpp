@@ -37,8 +37,8 @@ Commo::Commo(Captain *captain, View &view, int role)
   }
   boost::thread listen(boost::bind(&Commo::start, this));
   pool_ = new pool(1);
-  std::cout << "win_size_ " << captain_->win_size() << std::endl;
-  win_pool_ = new pool(captain_->win_size());
+//  std::cout << "win_size_ " << captain_->win_size() << std::endl;
+//  win_pool_ = new pool(captain_->win_size());
 }
 
 Commo::~Commo() {
@@ -49,10 +49,11 @@ void Commo::start() {
     LOG_INFO("processEvents attached!");
     face_->processEvents();
   //  face_->getIoService().run();
-    LOG_INFO("processEvents attach Finished?!");
+    LOG_INFO("processEvents attach Finished!");
   }
   catch (const std::exception& e) {
     std::cerr << "ERROR: " << e.what() << std::endl;
+    face_->shutdown();
   }
 } 
 
@@ -304,7 +305,8 @@ ndn::shared_ptr<ndn::Face> Commo::getFace() {
 }
 
 void Commo::stop() {
-  face_->getIoService().stop();
+  face_->shutdown();
+//  face_->getIoService().stop();
 }
 
 } // namespace ndnpaxos

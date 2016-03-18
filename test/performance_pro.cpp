@@ -6,8 +6,10 @@
 #include <ndn-cxx/face.hpp>
 #include <ndn-cxx/security/key-chain.hpp>
 #include <ndn-cxx/util/scheduler.hpp>
-//#include <boost/thread.hpp>
-//#include <boost/bind.hpp>
+#include <boost/thread.hpp>
+#include <boost/bind.hpp>
+#include <boost/thread/mutex.hpp>
+#include <boost/thread/condition.hpp>
 
 #include <unistd.h>
 #include <string>
@@ -18,17 +20,54 @@ class Producer {
  public:
   Producer(ndn::Name prefix) : prefix_(prefix) {
     face_ = ndn::make_shared<ndn::Face>();
-    face_->setInterestFilter(prefix,
+    prefix_id_ = face_->setInterestFilter(prefix,
                             bind(&Producer::onInterest, this, _1, _2),
                             ndn::RegisterPrefixSuccessCallback(),
                             bind(&Producer::onRegisterFailed, this, _1, _2));
-//    boost::thread listen(boost::bind(&Producer::attach, this));
+//    boost::thread timer(boost::bind(&Producer::recording, this));
+    boost::thread listen(boost::bind(&Producer::attach, this));
 //    pool_ = new pool(1);
   }
 
+  ~Producer() {
+    face_->shutdown();
+  }
+
+  void recording() {
+    int warming = 2;
+    int interval = 3;
+    for (int i = 0; i < warming + interval; i++) {
+      printf("Counting %d\n", i + 1);
+      sleep(1);
+    }
+    printf("%d s passed start punching\n", warming + interval);
+    int punch = 1;
+    for (int i = 0; i < interval * 4; i++) {
+      sleep(punch);
+      printf("PUNCH! %d\n", i + 1);
+    }
+    printf("Last %d s period\n", interval);
+    for (int i = interval ; i > 0; i--) {
+      printf("Counting %d\n", i);
+      sleep(1);
+    }
+//    face_->unsetInterestFilter(prefix_id_);
+//    face_->getIoService().stop();
+    face_->shutdown();
+    printf("Last Last %d s period\n", warming);
+    for (int i = warming ; i > 0; i--) {
+      printf("Counting %d\n", i);
+      sleep(1);
+    }
+//    face_->shutdown();
+    printf("Over!!!\n");
+  }
+  
+
   void attach() {
-    std::cout << "attach starting ..." << std::endl;
+    std::cout << "Producer attach starting ..." << std::endl;
     face_->processEvents();
+    std::cout << "Producer attach finishing ..." << std::endl;
 //    face_->getIoService().run();
   }
 
@@ -61,6 +100,7 @@ class Producer {
   }
 
  private:
+
 
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
 //    std::cout << "Producer I: " << interest.getName() << std::endl;
@@ -102,6 +142,8 @@ class Producer {
   ndn::KeyChain keyChain_;
 //  pool *pool_;
   std::chrono::high_resolution_clock::time_point start_;
+  const ndn::RegisteredPrefixId *prefix_id_;
+
 };
 
 int main(int argc, char** argv) {
@@ -116,12 +158,9 @@ int main(int argc, char** argv) {
   prefix.append(my_node_name);
 
   Producer producer(prefix);
-//
-//  producer.produce();
+  producer.recording();
 
-  producer.attach();
-  std::cout << ("Main thread sleeping ...") << std::endl;
-  sleep(10000000);
+//  producer.produce();
 
   return 0;
 }

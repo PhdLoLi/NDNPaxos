@@ -73,6 +73,35 @@ class Servant {
 //    LOG_INFO("count_latency triggered! slot_id : %llu", slot_id);
   }
 
+  void recording() {
+    int warming = 2;
+    int interval = 3;
+    for (int i = 0; i < warming + interval; i++) {
+      LOG_INFO("Warming & Not Recording Counting %d", i + 1);
+      sleep(1);
+    }
+    LOG_INFO("%d s passed start punching", warming + interval);
+    int punch = 1;
+    for (int i = 0; i < interval * 4; i++) {
+      sleep(punch);
+      LOG_INFO("PUNCH! %d", i + 1);
+    }
+    LOG_INFO("Last %d s period", interval);
+    for (int i = interval ; i > 0; i--) {
+      LOG_INFO("Stopping Recording Counting %d", i);
+      sleep(1);
+    }
+
+    commo_->stop();
+
+    LOG_INFO("Last Last %d s period", warming);
+    for (int i = warming * 2 ; i > 0; i--) {
+      LOG_INFO("Cooling Counting %d", i);
+      sleep(1);
+    }
+    LOG_INFO("Over!!!");
+  }
+
   std::string my_name_;
   node_id_t my_id_;
   node_id_t node_num_;
@@ -82,8 +111,6 @@ class Servant {
   Commo *commo_;
   
 };
-
-
 
 static void sig_int(int num) {
   std::cout << "Control + C triggered! " << std::endl;
@@ -103,13 +130,7 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   
   Servant servant(my_id, node_num);
-  sleep(2);
-//  servant.attach();
-
-
-  LOG_INFO("I'm sleeping for 10000");
-  sleep(100000000);
-  LOG_INFO("Servant ALL DONE!");
+  servant.recording();
 
   return 0;
 }
