@@ -17,7 +17,7 @@ The directory structure is as follows:
     * **config/** *-- config files of this project* 
     * **waf-tools/** *-- additional waf tools*
     * **test/** *-- test code*
-    * **examples/** *-- some simple example data*
+    * **examples/** *-- some simple example codes*
     * **libzfec/** *-- zefc library using for RS code*
     * **script/** *-- some python scripts*
     * **LICENSE**
@@ -115,7 +115,10 @@ $ ./waf
 
 Run Test
 --
-
+Background need run 
+<pre>
+$ nfd-start
+</pre>
 
 - Terminal 1 -- Node1 
 <pre>
