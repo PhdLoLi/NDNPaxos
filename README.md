@@ -131,8 +131,7 @@ parameters (Node_ID Node_Num)
 $ bin/master 0 2 1 1 0
 parameters (Node_ID Node_Num Value_Size Window_Size Local_orNot(0/1))
 </pre>
-When you are running locally, set the last parameter as 0
-Now master and servant using timer to end itself, so please start them at the SAME time.
+When you are running locally, set the last parameter as 0. Now master and servant using timer to end itself, so please start them at the SAME time.
 
 License
 ---
