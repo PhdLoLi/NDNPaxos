@@ -122,22 +122,17 @@ $ nfd-start
 
 - Terminal 1 -- Node1 
 <pre>
-$ bin/servant 1 3
-parameters (node_id node_num)
-</pre>
-
-- Terminal 2 -- Node2
-<pre>
-$ bin/servant 2 3 
-parameters (ndoe_id node_num)
+$ bin/servant 1 2
+parameters (Node_ID Node_Num)
 </pre>
 
 - Terminal 0 -- Node0(Master) 
 <pre>
-$ bin/master 0 3 1 1
-parameters (ndoe_id node_num value_size win_size)
+$ bin/master 0 2 1 1 0
+parameters (Node_ID Node_Num Value_Size Window_Size Local_orNot(0/1))
 </pre>
-
+When you are running locally, set the last parameter as 0
+Now master and servant using timer to end itself, so please start them at the SAME time.
 
 License
 ---
