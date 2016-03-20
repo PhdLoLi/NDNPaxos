@@ -1,0 +1,24 @@
+db:
+  path: ndndb
+  name: gintama.db 
+prefix: /ndn/thu/paxos 
+host:
+  - name: node0
+    addr: 192.168.1.100
+  - name: node1
+    addr: 192.168.1.101
+  - name: node2
+    addr: 192.168.1.102
+  - name: node3
+    addr: 192.168.1.103
+  - name: node4
+    addr: 192.168.1.104
+lease:
+  master_id: 0
+  period: 1000
+rs:
+  x: 5
+  n: 3
+  qr: 4
+  qw: 4
+  f: 1 

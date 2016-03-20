@@ -1,0 +1,22 @@
+db:
+  path: ndndb
+  name: gintama.db 
+prefix: /ndn/thu/paxos 
+host:
+  - name: node0
+    addr: localhost
+  - name: node1
+    addr: localhost
+  - name: node2
+    addr: localhost
+  - name: node3
+    addr: localhost
+lease:
+  master_id: 0
+  period: 1000
+rs:
+  x: 4 
+  n: 2
+  qr: 3 
+  qw: 3
+  f: 1 
