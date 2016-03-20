@@ -39,6 +39,8 @@ class Acceptor {
 
   PropValue *get_max_value();
 
+  void update_max_proposed(ballot_id_t);
+
  private:
   View *view_;
   // the max proposed ballot id I have ever seen, initial 0. 

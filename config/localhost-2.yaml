@@ -10,6 +10,7 @@ host:
 lease:
   master_id: 0
   period: 1000
+  length: 100000
 rs:
   x: 2
   n: 2

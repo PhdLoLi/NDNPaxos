@@ -104,4 +104,7 @@ PropValue *Acceptor::get_max_value() {
   return max_value_;
 }
 
+void Acceptor::update_max_proposed(ballot_id_t ballot_id) {
+  max_proposed_ballot_ = ballot_id;
+}
 }  // namespace ndnpaxos

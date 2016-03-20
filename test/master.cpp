@@ -150,16 +150,29 @@ class Master {
     std::ofstream file_throughput_;
     std::ofstream file_latency_;
     std::ofstream file_trytime_;
+    std::string thr_name;
+    std::string lat_name;
+    std::string try_name;
     
     LOG_INFO("Writing File Now!");
+    #if MODE_TYPE == 3
+    thr_name = "results/ndnpaxos/Q_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    lat_name = "results/ndnpaxos/Q_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    try_name = "results/ndnpaxos/Q_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    #elif MODE_TYPE == 2
+    thr_name = "results/ndnpaxos/M_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    lat_name = "results/ndnpaxos/M_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    try_name = "results/ndnpaxos/M_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    #else
+    thr_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    try_name = "results/ndnpaxos/r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    #endif
 
-    std::string thr_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
     file_throughput_.open(thr_name);
 
-    std::string lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
     file_latency_.open(lat_name);
 
-    std::string try_name = "results/ndnpaxos/r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
     file_trytime_.open(try_name);
 
     for (int i = 0; i < throughputs_.size(); i++) {

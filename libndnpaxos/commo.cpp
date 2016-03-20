@@ -74,7 +74,7 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
                                (msg_str.c_str()), msg_str.size());
 
   int collection = view_->nodes_size();
-  #if MODE_TYPE == 3
+  #if MODE_TYPE >= 2
     collection = view_->quorum_size();
   #else
   #endif 

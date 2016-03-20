@@ -25,6 +25,12 @@ Captain::Captain(View &view, callback_t& callback)
 //  commo_ = new Commo(this, view);
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
+#if MODE_TYPE == 2 
+  for(int i = 1; i <= view.length(); i++) {
+    acceptors_.emplace_back(new Acceptor(*view_));
+    acceptors_[i]->update_max_proposed((1 << 16) + view_->master_id());
+  }
+#endif
 }
 
 // now using this 
@@ -38,6 +44,12 @@ Captain::Captain(View &view, int window_size)
 //  commo_ = new Commo(this, view);
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
+#if MODE_TYPE == 2 
+  for(int i = 1; i <= view.length(); i++) {
+    acceptors_.emplace_back(new Acceptor(*view_));
+    acceptors_[i]->update_max_proposed((1 << 16) + view_->master_id());
+  }
+#endif
 }
 
 
@@ -221,13 +233,22 @@ void Captain::commit_value(std::string& data) {
 
   max_slot_++;
   proposers_[max_slot_] = prop_info;
+#if MODE_TYPE == 2 
+  proposers_[max_slot_]->curr_proposer->gen_next_ballot();
+  MsgAccept *msg_acc = proposers_[max_slot_]->curr_proposer->msg_accept();
+  msg_acc->mutable_msg_header()->set_slot_id(max_slot_);
+  proposers_[max_slot_]->proposer_status = PHASEII;
+
+  proposers_mutex_.unlock();
+  commo_->broadcast_msg(msg_acc, ACCEPT);
+#else
   MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
   proposers_[max_slot_]->proposer_status = INIT;
   msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
 
   proposers_mutex_.unlock();
-
   commo_->broadcast_msg(msg_pre, PREPARE);
+#endif
 
 //  new_slot(prop_value, 0);
 }

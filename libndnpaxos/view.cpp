@@ -10,7 +10,7 @@
 namespace ndnpaxos {
 
 View::View(node_id_t node_id, std::string cf) 
-  : node_id_(node_id), master_id_(0), period_(500) {
+  : node_id_(node_id), master_id_(0), period_(500), length_(100000) {
 
   LOG_INFO("loading config file %s ...", cf.c_str());
 	
@@ -58,6 +58,7 @@ View::View(node_id_t node_id, std::string cf)
   if (lease) {
     master_id_ = lease["master_id"].as<int>();
     period_ = lease["period"].as<int>();
+    length_ = lease["length"].as<int>();
   } else {
     LOG_INFO("No lease Node Found, using default master_id/0 period/500");
   }
@@ -170,6 +171,10 @@ node_id_t View::quorum_size() {
 
 uint32_t View::period() {
   return period_;
+}
+
+uint32_t View::length() {
+  return length_;
 }
 
 node_id_t View::rs_x() {

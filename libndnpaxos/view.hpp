@@ -31,6 +31,7 @@ class View {
   uint64_t nodes_size();
   node_id_t quorum_size();
   uint32_t period();
+  uint32_t length();
 
   node_id_t rs_x();
   node_id_t rs_n();
@@ -50,6 +51,8 @@ class View {
   uint64_t size_;
   node_id_t master_id_;
   uint32_t period_;
+  // total number of lease length_;
+  uint32_t length_;
   node_id_t q_size_;
   // related to Reed Solomon
   node_id_t rs_x_;
