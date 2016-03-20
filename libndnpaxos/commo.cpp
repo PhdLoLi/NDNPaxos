@@ -73,8 +73,13 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   ndn::name::Component message(reinterpret_cast<const uint8_t*>
                                (msg_str.c_str()), msg_str.size());
 
-
-  for (uint32_t i = 0; i < view_->nodes_size(); i++) {
+  int collection = view_->nodes_size();
+  #if MODE_TYPE == 3
+    collection = view_->quorum_size();
+  #else
+  #endif 
+  
+  for (uint32_t i = 0; i < collection; i++) {
     
     if (i == view_->whoami()) {
 //      pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));

@@ -29,6 +29,7 @@ class View {
   std::string db_name();
 
   uint64_t nodes_size();
+  node_id_t quorum_size();
   uint32_t period();
 
   node_id_t rs_x();
@@ -49,6 +50,7 @@ class View {
   uint64_t size_;
   node_id_t master_id_;
   uint32_t period_;
+  node_id_t q_size_;
   // related to Reed Solomon
   node_id_t rs_x_;
   node_id_t rs_n_;

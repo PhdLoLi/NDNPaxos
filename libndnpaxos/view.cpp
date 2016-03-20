@@ -5,6 +5,7 @@
 
 #include "view.hpp"
 #include <boost/filesystem.hpp>
+#include <math.h>
 
 namespace ndnpaxos {
 
@@ -52,6 +53,7 @@ View::View(node_id_t node_id, std::string cf)
   }
     
   size_ = host_nodes_.size();
+  q_size_ = ceil((size_ + 1) / 2.0);
 
   if (lease) {
     master_id_ = lease["master_id"].as<int>();
@@ -160,6 +162,10 @@ std::string View::db_name() {
 
 uint64_t View::nodes_size() {
   return size_;
+}
+
+node_id_t View::quorum_size() {
+  return q_size_;
 }
 
 uint32_t View::period() {

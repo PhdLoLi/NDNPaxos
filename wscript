@@ -131,8 +131,8 @@ def _enable_mode(conf):
         Logs.pprint("PINK", "Mode type set to Multi-Paxos")
         conf.env.append_value("CFLAGS", "-DMODE_TYPE=2")
         conf.env.append_value("CXXFLAGS", "-DMODE_TYPE=2")
-    elif Options.options.mode == 'RSII':
-        Logs.pprint("PINK", "Mode type set to RSII")
+    elif Options.options.mode == 'Q':
+        Logs.pprint("PINK", "Mode type set to Quorum")
         conf.env.append_value("CFLAGS", "-DMODE_TYPE=3")
         conf.env.append_value("CXXFLAGS", "-DMODE_TYPE=3")
     elif Options.options.mode == '':

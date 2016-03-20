@@ -14,7 +14,7 @@ Proposer::Proposer(View &view, PropValue &value)
   : view_(&view), init_value_(&value),// callback_(callback),
     curr_ballot_(0), curr_value_(NULL),
     max_ballot_(0), max_value_(NULL),
-    qr_(ceil((view_->nodes_size() + 1) / 2.0)), qw_(qr_) {
+    qr_(view.quorum_size()), qw_(qr_) {
   #if MODE_TYPE == 1
   qr_ = view_->rs_qr();
   qw_ = view_->rs_qw();
