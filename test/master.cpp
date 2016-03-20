@@ -159,7 +159,7 @@ class Master {
     std::string lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
     file_latency_.open(lat_name);
 
-    std::string try_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
+    std::string try_name = "results/ndnpaxos/r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
     file_trytime_.open(try_name);
 
     for (int i = 0; i < throughputs_.size(); i++) {
