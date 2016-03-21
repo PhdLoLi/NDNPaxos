@@ -20,6 +20,7 @@ class Producer {
   Producer(ndn::Name prefix, Captain *captain, ndn::shared_ptr<ndn::Face> face);
   void attach();
   void run();
+  void init_curr_value();
 
  private:
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);

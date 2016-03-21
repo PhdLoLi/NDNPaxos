@@ -29,7 +29,7 @@ class Master {
   Master(node_id_t my_id, int node_num, int value_size, int win_size, int local) 
     : my_id_(my_id), node_num_(node_num), 
       value_size_(value_size), win_size_(win_size),
-      commit_counter_(0), thr_counter_(0), starts_(2000000),
+      commit_counter_(0), thr_counter_(0), starts_(500000),
       recording_(false), done_(false), local_(local) {
 
 //    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
@@ -98,41 +98,41 @@ class Master {
 //      LOG_INFO("COMMIT DONE***********************************************************************");
     }
 
-    for (int i = 0; i < interval; i++) {
-      LOG_INFO("Not Recording Counting %d", i + 1);
-      sleep(1);
-    }
-    LOG_INFO("%d s passed start punching", interval);
+//    for (int i = 0; i < interval; i++) {
+//      LOG_INFO("Not Recording Counting %d", i + 1);
+//      sleep(1);
+//    }
+//    LOG_INFO("%d s passed start punching", interval);
 
     thr_mut_.lock();
     recording_ = true;
     thr_mut_.unlock();
 
-    uint64_t before = 0;
-    uint64_t throughput = 0;
-
-    for (int j = 0; j < interval * 4; j++) {
-      LOG_INFO("Time %d", j + 1);
-
-      thr_mut_.lock();
-      before = thr_counter_;
-      thr_mut_.unlock();
-
-      sleep(1);
-
-      thr_mut_.lock();
-      throughput = thr_counter_ - before; 
-
-      if (periods_.size() > 0) {
-        LOG_INFO("PUNCH!  -- counter:%lu second:1 throughput:%lu latency:%lu ns", thr_counter_, throughput, periods_[periods_.size() - 1]);
-      }
-      else {
-        LOG_INFO("PUNCH! -- counter:%lu second:1 throughput:%lu periods_.size() == 0", thr_counter_, throughput);
-      }
-
-      thr_mut_.unlock();
-      throughputs_.push_back(throughput);
-    }
+//    uint64_t before = 0;
+//    uint64_t throughput = 0;
+//
+//    for (int j = 0; j < interval * 4; j++) {
+//      LOG_INFO("Time %d", j + 1);
+//
+//      thr_mut_.lock();
+//      before = thr_counter_;
+//      thr_mut_.unlock();
+//
+//      sleep(1);
+//
+//      thr_mut_.lock();
+//      throughput = thr_counter_ - before; 
+//
+//      if (periods_.size() > 0) {
+//        LOG_INFO("PUNCH!  -- counter:%lu second:1 throughput:%lu latency:%lu ns", thr_counter_, throughput, periods_[periods_.size() - 1]);
+//      }
+//      else {
+//        LOG_INFO("PUNCH! -- counter:%lu second:1 throughput:%lu periods_.size() == 0", thr_counter_, throughput);
+//      }
+//
+//      thr_mut_.unlock();
+//      throughputs_.push_back(throughput);
+//    }
     
     thr_mut_.lock();
     recording_ = false;
@@ -146,52 +146,6 @@ class Master {
     }
 
     commo_->stop();
-
-    std::ofstream file_throughput_;
-    std::ofstream file_latency_;
-    std::ofstream file_trytime_;
-    std::string thr_name;
-    std::string lat_name;
-    std::string try_name;
-    
-    LOG_INFO("Writing File Now!");
-    #if MODE_TYPE == 3
-    thr_name = "results/ndnpaxos/Q_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    lat_name = "results/ndnpaxos/Q_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    try_name = "results/ndnpaxos/Q_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    #elif MODE_TYPE == 2
-    thr_name = "results/ndnpaxos/M_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    lat_name = "results/ndnpaxos/M_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    try_name = "results/ndnpaxos/M_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    #else
-    thr_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    try_name = "results/ndnpaxos/r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-    #endif
-
-    file_throughput_.open(thr_name);
-
-    file_latency_.open(lat_name);
-
-    file_trytime_.open(try_name);
-
-    for (int i = 0; i < throughputs_.size(); i++) {
-      file_throughput_ << throughputs_[i] << "\n";
-    }
-
-    file_throughput_.close();
-
-    for (int j = 0; j < periods_.size(); j++) {
-      file_latency_ << periods_[j] << "\n";
-    }
-    file_latency_.close();
-
-    for (int j = 0; j < trytimes_.size(); j++) {
-      file_trytime_ << trytimes_[j] << "\n";
-    }
-    file_trytime_.close();
-
-    LOG_INFO("Writing File Finished!");
 
     LOG_INFO("Last Last %d s period", warming);
     for (int i = warming ; i > 0; i--) {
@@ -230,15 +184,15 @@ class Master {
     }
     thr_mut_.unlock();
 
-    if (done_ == false) {
-      counter_mut_.lock();
-      std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
-      starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
-  //    std::cout << "Start commit +++++++++++ " << value << std::endl;
-      commit_counter_++;
-      counter_mut_.unlock();
-      captain_->commit(value);
-    }
+//    if (done_ == false) {
+//      counter_mut_.lock();
+//      std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
+//      starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
+//  //    std::cout << "Start commit +++++++++++ " << value << std::endl;
+//      commit_counter_++;
+//      counter_mut_.unlock();
+//      captain_->commit(value);
+//    }
 
   }
   

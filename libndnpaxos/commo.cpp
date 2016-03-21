@@ -83,8 +83,8 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
     
     if (i == view_->whoami()) {
 //      pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
+      LOG_DEBUG_COM("Broadcast to myself --node%d (msg_type):%s", i, msg_type_str[msg_type].c_str());
       captain_->handle_msg(msg, msg_type);
-      LOG_DEBUG_COM("Broadcast to myself %d (msg_type):%s", i, msg_type_str[msg_type].c_str());
       continue;
     }
 
@@ -105,7 +105,7 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
   // Create Data packet
   ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
   data->setName(dataName);
-  data->setFreshnessPeriod(ndn::time::seconds(10));
+  data->setFreshnessPeriod(ndn::time::seconds(0));
   data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
 
   // Sign Data packet with default identity

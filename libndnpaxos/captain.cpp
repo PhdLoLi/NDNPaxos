@@ -26,9 +26,11 @@ Captain::Captain(View &view, callback_t& callback)
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 #if MODE_TYPE == 2 
-  for(int i = 1; i <= view.length(); i++) {
+  ballot_id_t max_id = (1 << 16) + view_->master_id();
+  LOG_INFO_CAP("init acceptors for %d length and update max_proposed_value == %d", view_->length(), max_id);
+  for(int i = 1; i <= view_->length(); i++) {
     acceptors_.emplace_back(new Acceptor(*view_));
-    acceptors_[i]->update_max_proposed((1 << 16) + view_->master_id());
+    acceptors_[i]->update_max_proposed(max_id);
   }
 #endif
 }
@@ -45,9 +47,11 @@ Captain::Captain(View &view, int window_size)
   chosen_values_.push_back(NULL);
   acceptors_.push_back(NULL);
 #if MODE_TYPE == 2 
-  for(int i = 1; i <= view.length(); i++) {
+  ballot_id_t max_id = (1 << 16) + view_->master_id();
+  LOG_INFO_CAP("init acceptors for %d length and update max_proposed_value == %d", view_->length(), max_id);
+  for(int i = 1; i <= view_->length(); i++) {
     acceptors_.emplace_back(new Acceptor(*view_));
-    acceptors_[i]->update_max_proposed((1 << 16) + view_->master_id());
+    acceptors_[i]->update_max_proposed(max_id);
   }
 #endif
 }
@@ -172,13 +176,23 @@ void Captain::commit(PropValue* prop_value) {
 
   max_slot_++;
   proposers_[max_slot_] = prop_info;
+#if MODE_TYPE == 2 
+  proposers_[max_slot_]->curr_proposer->gen_next_ballot();
+  proposers_[max_slot_]->curr_proposer->init_curr_value();
+  MsgAccept *msg_acc = proposers_[max_slot_]->curr_proposer->msg_accept();
+  msg_acc->mutable_msg_header()->set_slot_id(max_slot_);
+  proposers_[max_slot_]->proposer_status = PHASEII;
+
+  proposers_mutex_.unlock();
+  commo_->broadcast_msg(msg_acc, ACCEPT);
+#else
   MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
   proposers_[max_slot_]->proposer_status = INIT;
   msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
 
   proposers_mutex_.unlock();
-  
   commo_->broadcast_msg(msg_pre, PREPARE);
+#endif
 
 }
 
@@ -235,6 +249,7 @@ void Captain::commit_value(std::string& data) {
   proposers_[max_slot_] = prop_info;
 #if MODE_TYPE == 2 
   proposers_[max_slot_]->curr_proposer->gen_next_ballot();
+  proposers_[max_slot_]->curr_proposer->init_curr_value();
   MsgAccept *msg_acc = proposers_[max_slot_]->curr_proposer->msg_accept();
   msg_acc->mutable_msg_header()->set_slot_id(max_slot_);
   proposers_[max_slot_]->proposer_status = PHASEII;

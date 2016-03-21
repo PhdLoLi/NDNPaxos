@@ -81,6 +81,8 @@ class Proposer {
    */
   PropValue *get_init_value();
 
+  void init_curr_value();
+
  private:
   View *view_; 
 

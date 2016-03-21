@@ -204,6 +204,7 @@ AckType Proposer::handle_msg_accepted(MsgAckAccept *msg_ack_acc) {
   if (msg_ack_acc->ballot_id() < curr_ballot_ || !curr_value_) {
 //    std::cout << "\tProposer handle_msg_accepted --- DROP! from --NodeID" << msg_ack_acc->msg_header().node_id() << std::endl;
     LOG_TRACE_PRO("<handle_msg_accepted> ---- DROP!  --NodeID %u", msg_ack_acc->msg_header().node_id());
+    LOG_TRACE_PRO("msg_ack_acc->ballot_id() = %lu curr_ballot_ = %lu ", msg_ack_acc->ballot_id(), curr_ballot_);
     return DROP;
   }
   node_id_t node_id = (uint16_t)msg_ack_acc->msg_header().node_id();
@@ -267,6 +268,10 @@ void Proposer::die_clean() {
 
 PropValue * Proposer::get_init_value() {
   return init_value_;
+}
+
+void Proposer::init_curr_value() {
+  curr_value_ = init_value_;
 }
 
 }
