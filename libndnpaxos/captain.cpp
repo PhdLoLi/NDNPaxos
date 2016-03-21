@@ -17,7 +17,7 @@ ndn::Name Captain::dumName_ = ndn::Name("");
 // no thread pool
 Captain::Captain(View &view, callback_t& callback)
   : view_(&view), 
-    max_chosen_(0), max_chosen_without_hole_(0), max_slot_(0),
+    max_chosen_(0), max_chosen_without_hole_(0), max_slot_(0), last_slot_(0),
     value_id_(view_->whoami()), window_size_(1),
     callback_(callback), callback_full_(NULL), callback_latency_(NULL), 
     work_(true) {
@@ -38,7 +38,7 @@ Captain::Captain(View &view, callback_t& callback)
 // now using this 
 Captain::Captain(View &view, int window_size)
   : view_(&view), 
-    max_chosen_(0), max_chosen_without_hole_(0), max_slot_(0),
+    max_chosen_(0), max_chosen_without_hole_(0), max_slot_(0), last_slot_(0),
     value_id_(view_->whoami()), window_size_(window_size),
     callback_(NULL), callback_full_(NULL), callback_latency_(NULL), 
     work_(true) {
@@ -184,7 +184,18 @@ void Captain::commit(PropValue* prop_value) {
   proposers_[max_slot_]->proposer_status = PHASEII;
 
   proposers_mutex_.unlock();
+
+  max_chosen_mutex_.lock();
+  if (max_chosen_ > last_slot_) {
+    last_slot_++;
+    msg_acc->set_last_slot(last_slot_);
+    value_id_t last_value = chosen_values_[last_slot_]->id();
+    msg_acc->set_last_value(last_value);
+  }
+  max_chosen_mutex_.unlock();
+
   commo_->broadcast_msg(msg_acc, ACCEPT);
+
 #else
   MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
   proposers_[max_slot_]->proposer_status = INIT;
@@ -255,6 +266,16 @@ void Captain::commit_value(std::string& data) {
   proposers_[max_slot_]->proposer_status = PHASEII;
 
   proposers_mutex_.unlock();
+
+  max_chosen_mutex_.lock();
+  if (max_chosen_ > last_slot_) {
+    last_slot_++;
+    msg_acc->set_last_slot(last_slot_);
+    value_id_t last_value = chosen_values_[last_slot_]->id();
+    msg_acc->set_last_value(last_value);
+  }
+  max_chosen_mutex_.unlock();
+
   commo_->broadcast_msg(msg_acc, ACCEPT);
 #else
   MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
@@ -440,17 +461,18 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               commo_->send_one_msg(msg_acc, ACCEPT, i);
          }
 #else
-          MsgAccept *msg_acc = proposers_[slot_id]->curr_proposer->msg_accept();
+         MsgAccept *msg_acc = proposers_[slot_id]->curr_proposer->msg_accept();
 
-          msg_acc->mutable_msg_header()->set_slot_id(slot_id);
-          // IMPORTANT set status
-          proposers_[slot_id]->proposer_status = PHASEII;
+         msg_acc->mutable_msg_header()->set_slot_id(slot_id);
+         // IMPORTANT set status
+         proposers_[slot_id]->proposer_status = PHASEII;
+        
+          
+         proposers_mutex_.unlock();  
 
-          proposers_mutex_.unlock();
-
-          commo_->broadcast_msg(msg_acc, ACCEPT);
+         commo_->broadcast_msg(msg_acc, ACCEPT);
 #endif
-          break;
+         break;
         }
         case RESTART: {  //RESTART
           LOG_TRACE_CAP("(msg_type):PROMISE, RESTART");
@@ -489,8 +511,29 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
       if (msg_acc->msg_header().node_id() == view_->whoami())
         handle_msg(msg_ack_acc, ACCEPTED);
-      else 
+      else { 
+#if MODE_TYPE == 2 
+        if (msg_acc->has_last_slot()) {
+          slot_id_t dec_slot = msg_acc->last_slot(); 
+
+          if (max_chosen_ >= dec_slot && chosen_values_[dec_slot]) {
+            return;
+          }
+
+          LOG_DEBUG_CAP("%s(msg_type):ACCEPT - DECIDE (slot_id):%llu from (node_id):%u --NodeID %u handle", 
+                        UND_RED, dec_slot, msg_acc->msg_header().node_id(), view_->whoami());
+
+          if (acceptors_.size() > dec_slot && acceptors_[dec_slot]->get_max_value() && 
+             (acceptors_[dec_slot]->get_max_value()->id() == msg_acc->last_value())) {
+            // the value is stored in acceptors_[dec_slot]->max_value_
+            add_learn_value(dec_slot, acceptors_[dec_slot]->get_max_value(), msg_acc->msg_header().node_id()); 
+            // NDN to avoid timeout  
+          } 
+        }
+#endif
         commo_->send_one_msg(msg_ack_acc, ACCEPTED, msg_acc->msg_header().node_id(), dataName);
+      }
+        
 
       break;
     } 
@@ -574,9 +617,12 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
                   view_->whoami(), max_chosen_without_hole_);
 //              tocommit_values_mutex_.unlock();
               proposers_mutex_.unlock();
+#if MODE_TYPE >= 2
+#else
             // DECIDE Progress to help others fast learning
-//             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
-//             commo_->broadcast_msg(msg_dec, DECIDE);
+             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+             commo_->broadcast_msg(msg_dec, DECIDE);
+#endif
 
             } else {
 
@@ -590,9 +636,12 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               max_slot_++;
   
               proposers_[max_slot_] = prop_info;
-             // DECIDE Progress to help others fast learning
-//              MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
-//              commo_->broadcast_msg(msg_dec, DECIDE);
+#if MODE_TYPE >= 2
+#else
+            // DECIDE Progress to help others fast learning
+             MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
+             commo_->broadcast_msg(msg_dec, DECIDE);
+#endif
   
 #if MODE_TYPE == 2 
               proposers_[max_slot_]->curr_proposer->gen_next_ballot();
@@ -637,10 +686,12 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
             proposers_mutex_.unlock();
 
-//            MsgDecide *msg_dec = msg_decide(slot_id);
-//
-//            commo_->broadcast_msg(msg_dec, DECIDE);
-//            new_slot(init_value, try_time, slot_id);
+#if MODE_TYPE >= 2
+#else
+            // DECIDE Progress to help others fast learning
+             MsgDecide *msg_dec = msg_decide(slot_id);
+             commo_->broadcast_msg(msg_dec, DECIDE);
+#endif
             LOG_INFO_CAP("Recommit the same (value):%s try_time :%d!!!", init_value->data().c_str(), try_time);
             commo_->broadcast_msg(msg_pre, PREPARE);
             
@@ -681,8 +732,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
         // the value is stored in acceptors_[dec_slot]->max_value_
         add_learn_value(dec_slot, acceptors_[dec_slot]->get_max_value(), msg_dec->msg_header().node_id()); 
         // NDN to avoid timeout  
-        MsgCommand *msg_cmd = msg_command(REPLY_DECIDE);
-        commo_->send_one_msg(msg_cmd, COMMAND, msg_dec->msg_header().node_id(), dataName);
+//        MsgCommand *msg_cmd = msg_command(REPLY_DECIDE);
+//        commo_->send_one_msg(msg_cmd, COMMAND, msg_dec->msg_header().node_id(), dataName);
       } else {
         // acceptors_[dec_slot] doesn't contain such value, need learn from this sender
         MsgLearn *msg_lea = msg_learn(dec_slot);

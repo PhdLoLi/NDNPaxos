@@ -196,6 +196,8 @@ class Captain {
   slot_id_t max_chosen_; 
   slot_id_t max_chosen_without_hole_; 
   slot_id_t max_slot_;
+  // piggyback the decide message 
+  slot_id_t last_slot_;
 
   // aim to supporting window
   value_id_t value_id_;

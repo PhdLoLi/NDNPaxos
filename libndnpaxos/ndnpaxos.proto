@@ -48,6 +48,8 @@ message MsgAccept {
   required MsgHeader msg_header = 1;
   required uint64 ballot_id = 2;
   required PropValue prop_value = 3;
+  optional uint64 last_slot = 4;
+  optional uint64 last_value = 5;
 }
 
 message MsgAckAccept {
