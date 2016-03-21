@@ -544,6 +544,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           LOG_DEBUG_CAP("%sNodeID:%u Successfully Choose (value):%s ! (slot_id):%llu %s", 
                         BAK_MAG, view_->whoami(), chosen_value->data().c_str(), slot_id, NRM);
 
+          proposers_.erase(slot_id);
+
           proposers_mutex_.unlock();
 
           if (chosen_value->id() == init_value->id()) {
@@ -551,8 +553,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               callback_latency_(slot_id, *chosen_value, try_time);
             }
           }
-
- 
 
           // important change max_chosen & max_chosen
           add_chosen_value(slot_id, chosen_value);
@@ -563,7 +563,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           LOG_DEBUG_CAP("(msg_type):ACCEPTED, Broadcast this chosen_value");
 
           proposers_mutex_.lock();
-          proposers_.erase(slot_id);
 
           if (chosen_value->id() == init_value->id()) {
 
@@ -591,20 +590,29 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
               max_slot_++;
   
               proposers_[max_slot_] = prop_info;
-              MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
-              proposers_[max_slot_]->proposer_status = INIT;
-              msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
-  
-              proposers_mutex_.unlock();
-  
              // DECIDE Progress to help others fast learning
 //              MsgDecide *msg_dec = msg_decide(slot_id, chosen_value->id());
 //              commo_->broadcast_msg(msg_dec, DECIDE);
   
+#if MODE_TYPE == 2 
+              proposers_[max_slot_]->curr_proposer->gen_next_ballot();
+              proposers_[max_slot_]->curr_proposer->init_curr_value();
+              MsgAccept *msg_acc = proposers_[max_slot_]->curr_proposer->msg_accept();
+              msg_acc->mutable_msg_header()->set_slot_id(max_slot_);
+              proposers_[max_slot_]->proposer_status = PHASEII;
+            
+              proposers_mutex_.unlock();
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
+              commo_->broadcast_msg(msg_acc, ACCEPT);
+#else
+              MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
+              proposers_[max_slot_]->proposer_status = INIT;
+              msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
 
+              proposers_mutex_.unlock();
+              LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
               commo_->broadcast_msg(msg_pre, PREPARE);
-  
+#endif
             }
 
 //            if (callback_latency_) {
