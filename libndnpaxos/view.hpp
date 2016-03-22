@@ -18,6 +18,7 @@ class View {
   std::vector<host_info_t> *get_host_nodes();
   node_id_t whoami();
   bool if_master();
+  bool if_quorum();
   void set_master(node_id_t);
 
   std::string hostname();

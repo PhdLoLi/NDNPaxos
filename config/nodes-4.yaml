@@ -1,23 +1,9 @@
-db:
-  path: ndndb
-  name: gintama.db 
-prefix: /ndn/thu/paxos 
+db: {name: gintama.db, path: ndndb}
 host:
-  - name: node0
-    addr: 192.168.1.100
-  - name: node1
-    addr: 192.168.1.101
-  - name: node2
-    addr: 192.168.1.102
-  - name: node3
-    addr: 192.168.1.103
-lease:
-  master_id: 0
-  period: 1000
-  length: 100000
-rs:
-  x: 4
-  n: 2
-  qr: 3 
-  qw: 3
-  f: 1 
+- {addr: 192.168.1.100, name: node0}
+- {addr: 192.168.1.101, name: node1}
+- {addr: 192.168.1.102, name: node2}
+- {addr: 192.168.1.103, name: node3}
+lease: {length: 100000, master_id: 0, period: 1000}
+prefix: /ndn/thu/naxos
+rs: {f: 1, n: 2, qr: 3, qw: 3, x: 4}

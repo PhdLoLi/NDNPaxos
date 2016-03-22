@@ -527,6 +527,10 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
              (acceptors_[dec_slot]->get_max_value()->id() == msg_acc->last_value())) {
             // the value is stored in acceptors_[dec_slot]->max_value_
             add_learn_value(dec_slot, acceptors_[dec_slot]->get_max_value(), msg_acc->msg_header().node_id()); 
+            
+            // produce /prefix/log/slot_id/value_id data value_data
+            commo_->produce_log(dec_slot, chosen_values_[dec_slot]);
+
             // NDN to avoid timeout  
           } 
         }
@@ -966,6 +970,11 @@ std::vector<PropValue *> Captain::get_chosen_values() {
   return chosen_values_; 
 }
 
+PropValue *Captain::get_chosen_value(slot_id_t slot_id) {
+  if (slot_id <= max_chosen_)
+    return chosen_values_[slot_id];
+  else return NULL;
+}
 
 /**
  * Add a new chosen_value 
@@ -1004,6 +1013,7 @@ void Captain::add_chosen_value(slot_id_t slot_id, PropValue *prop_value) {
 void Captain::add_learn_value(slot_id_t slot_id, PropValue *prop_value, node_id_t node_id) {
   LOG_DEBUG("<add_learn_value> slot_id:%u from node_id:%d!", slot_id, node_id);
   add_chosen_value(slot_id, prop_value);
+  
 }
 
 // all inside max_chosen_mutex_.lock() 

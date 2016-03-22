@@ -10,7 +10,7 @@
 namespace ndnpaxos {
 
 View::View(node_id_t node_id, std::string cf) 
-  : node_id_(node_id), master_id_(0), period_(500), length_(100000) {
+  : node_id_(node_id), master_id_(0), period_(500), length_(100000), db_name_("Lijing.db") {
 
   LOG_INFO("loading config file %s ...", cf.c_str());
 	
@@ -60,7 +60,7 @@ View::View(node_id_t node_id, std::string cf)
     period_ = lease["period"].as<int>();
     length_ = lease["length"].as<int>();
   } else {
-    LOG_INFO("No lease Node Found, using default master_id/0 period/500");
+    LOG_INFO("No lease Node Found, using default master_id/0 period/500 length/100000");
   }
   
   if (db) {
@@ -127,6 +127,10 @@ node_id_t View::whoami() {
 
 bool View::if_master() {
   return node_id_ == master_id_ ? true : false; 
+}
+
+bool View::if_quorum() {
+  return node_id_ < q_size_ ? true : false; 
 }
 
 void View::set_master(node_id_t node_id) {
@@ -218,7 +222,12 @@ void View::print_host_nodes() {
   std::cout << "  -----*-*-*-*-*-*-*-----   " << std::endl;
   std::cout << "\t Master_ID: " << master_id_ << std::endl;
   std::cout << "\t Period: " << period_ << std::endl;
+  std::cout << "\t Length: " << length_ << std::endl;
   std::cout << "-----*-*-*-*-*-*-*-*-*------\n" << std::endl;
+  std::cout << "\t DB INFO" << std::endl;
+  std::cout << "  -----*-*-*-*-*-*-*-----   " << std::endl;
+  std::cout << "\t DB_Name: " << db_name_ << std::endl;
+  std::cout << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*" << std::endl;
 #if MODE_TYPE == 1
   std::cout << "\t RS INFO" << std::endl;
   std::cout << "  -----*-*-*-*-*-*-*-----   " << std::endl;

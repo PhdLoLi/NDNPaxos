@@ -32,8 +32,8 @@ using namespace std;
   
 class Servant {
  public:
-  Servant(node_id_t my_id, int node_num, int local) 
-    : my_id_(my_id), node_num_(node_num), 
+  Servant(node_id_t my_id, int node_num, int win_size, int local) 
+    : my_id_(my_id), node_num_(node_num), win_size_(win_size), 
       thr_counter_(0), recording_(false), local_(local) {
 
     std::string tag;
@@ -92,6 +92,13 @@ class Servant {
       sleep(1);
     }
     LOG_INFO("%d s passed start punching", warming + interval);
+
+    // add for consume logs only needs for non-quorum
+    if (!view_->if_quorum()) {
+      LOG_INFO("Start Cosuming for Logs, becasue the node is not quorum");
+      commo_->consume_log(win_size_);
+    }
+
     int punch = 1;
 
     thr_mut_.lock();
@@ -142,6 +149,7 @@ class Servant {
   std::string my_name_;
   node_id_t my_id_;
   node_id_t node_num_;
+  int win_size_;
 
   Captain *captain_;
   View *view_;
@@ -165,16 +173,17 @@ int main(int argc, char** argv) {
   signal(SIGINT, sig_int);
  
 
-  if (argc < 4) {
-    std::cerr << "Usage: Node_ID Node_Num LocalorNot" << std::endl;
+  if (argc < 5) {
+    std::cerr << "Usage: Node_ID Node_Num Consume_Log_Win_Size LocalorNot" << std::endl;
     return 0;
   }
 
   node_id_t my_id = stoul(argv[1]); 
   int node_num = stoi(argv[2]);
-  int local = stoi(argv[3]);
+  int win_size = stoi(argv[3]);
+  int local = stoi(argv[4]);
   
-  Servant servant(my_id, node_num, local);
+  Servant servant(my_id, node_num, win_size, local);
   servant.recording();
 
   return 0;

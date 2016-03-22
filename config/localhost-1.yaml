@@ -1,17 +1,6 @@
-db:
-  path: ndndb
-  name: gintama 
-prefix: /ndn/thu/paxos 
+db: {name: gintama, path: ndndb}
 host:
-  - name: node0
-    addr: localhost
-lease:
-  master_id: 0
-  period: 1000
-  length: 100000
-rs:
-  x: 1
-  n: 1
-  qr: 1 
-  qw: 1
-  f: 0
+- {addr: localhost, name: node0}
+lease: {length: 100000, master_id: 0, period: 1000}
+prefix: /ndn/thu/naxos
+rs: {f: 0, n: 1, qr: 1, qw: 1, x: 1}

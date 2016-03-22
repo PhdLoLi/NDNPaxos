@@ -13,28 +13,50 @@
 namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view, int role) 
-  : captain_(captain), view_(&view), reg_ok_(false) {
+  : captain_(captain), view_(&view), reg_ok_(false), log_name_(view_->prefix()), log_counter_(0) {
 
   face_ = ndn::make_shared<ndn::Face>();
 //  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
   LOG_INFO_COM("%s Init START", view_->hostname().c_str());
 
   for (uint32_t i = 0; i < view_->nodes_size(); i++) {
-    consumer_names_.push_back(ndn::Name(view_->prefix()).append(view_->hostname(i)));
+    ndn::Name new_name(view_->prefix()); 
+    consumer_names_.push_back(new_name.append(view_->hostname(i)));
 //    ndn::Interest interest;
 //    interest.setInterestLifetime(ndn::time::milliseconds(100));
 //    interest.setMustBeFresh(true);
 //    consumer_interests_.push_back(interest);
-    LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
+//    LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
+  }
+  log_name_.append("log");
+
+#if MODE_TYPE >= 2
+  if (view_->if_master()) {
+    // only register master for clients
+  } else {
+
+    LOG_INFO_COM("setInterestFilter for %s", consumer_names_[view_->whoami()].toUri().c_str());
+    face_->setInterestFilter(consumer_names_[view_->whoami()],
+                          bind(&Commo::onInterest, this, _1, _2),
+                          bind(&Commo::onRegisterSucceed, this, _1),
+                          bind(&Commo::onRegisterFailed, this, _1, _2));
+    LOG_INFO_COM("setInterestFilter for %s", log_name_.toUri().c_str());
+    face_->setInterestFilter(log_name_,
+                          bind(&Commo::onInterestLog, this, _1, _2),
+                          bind(&Commo::onRegisterSucceed, this, _1),
+                          bind(&Commo::onRegisterFailed, this, _1, _2));
+    // none master node needs to register itself node_id and for committed value
   }
 
+#else 
   if (role <= 1) { 
-    LOG_INFO("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
+    LOG_INFO_COM("setInterestFilter start %s", consumer_names_[view_->whoami()].toUri().c_str());
     face_->setInterestFilter(consumer_names_[view_->whoami()],
                           bind(&Commo::onInterest, this, _1, _2),
                           bind(&Commo::onRegisterSucceed, this, _1),
                           bind(&Commo::onRegisterFailed, this, _1, _2));
   }
+#endif
   boost::thread listen(boost::bind(&Commo::start, this));
   pool_ = new pool(1);
 //  std::cout << "win_size_ " << captain_->win_size() << std::endl;
@@ -46,10 +68,10 @@ Commo::~Commo() {
 
 void Commo::start() {
   try {
-    LOG_INFO("processEvents attached!");
+    LOG_INFO_COM("processEvents attached!");
     face_->processEvents();
   //  face_->getIoService().run();
-    LOG_INFO("processEvents attach Finished!");
+    LOG_INFO_COM("processEvents attach Finished!");
   }
   catch (const std::exception& e) {
     std::cerr << "ERROR: " << e.what() << std::endl;
@@ -101,11 +123,11 @@ void Commo::broadcast_msg(google::protobuf::Message *msg, MsgType msg_type) {
   }
 }
 
-void Commo::produce(std::string &content, ndn::Name& dataName) {
+void Commo::produce(std::string &content, ndn::Name& dataName, int seconds) {
   // Create Data packet
   ndn::shared_ptr<ndn::Data> data = ndn::make_shared<ndn::Data>();
   data->setName(dataName);
-  data->setFreshnessPeriod(ndn::time::seconds(0));
+  data->setFreshnessPeriod(ndn::time::seconds(seconds));
   data->setContent(reinterpret_cast<const uint8_t*>(content.c_str()), content.size());
 
   // Sign Data packet with default identity
@@ -115,7 +137,6 @@ void Commo::produce(std::string &content, ndn::Name& dataName) {
   // Return Data packet to the requester
 //  std::cout << ">>Producer D: " << *data << std::endl;
   face_->put(*data);
-
 }
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id) {
@@ -150,6 +171,46 @@ void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_
   msg_str.append(std::to_string(msg_type));
 
   produce(msg_str, dataName);
+}
+
+void Commo::consume_log_next() {
+  ndn::Name name(log_name_);
+  log_mut_.lock();
+  log_counter_++;
+  ndn::Interest interest(name.appendNumber(log_counter_));
+  log_mut_.unlock();
+  interest.setInterestLifetime(ndn::time::milliseconds(3000));
+  interest.setMustBeFresh(true);
+  face_->expressInterest(interest,
+                         bind(&Commo::onDataLog, this,  _1, _2),
+                         bind(&Commo::onNack, this,  _1, _2),
+                         bind(&Commo::onTimeout, this, _1, 0));
+}
+
+void Commo::consume_log(int win_size) {
+  for (int i = 0; i < win_size; i++) {
+    consume_log_next();  
+  }
+}
+
+void Commo::produce_log(slot_id_t slot_id, PropValue *prop_value) {
+
+  ndn::Name dataName(log_name_);
+  dataName.appendNumber(slot_id).appendNumber(prop_value->id());
+  LOG_TRACE_COM("produce msg-- dataName %s ", dataName.toUri().c_str());
+
+  produce(*(prop_value->mutable_data()), dataName, 10000);
+}
+
+void Commo::onInterestLog(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
+  // deal with interest asking for committed_log of slot_id
+  ndn::Name dataName(interest.getName());
+  LOG_TRACE_COM("<< Producer onInterestLog: %s", dataName.toUri().c_str());
+  slot_id_t slot_id = dataName.get(-1).toNumber();
+  PropValue *prop_value = captain_->get_chosen_value(slot_id);
+  if (prop_value) {
+    produce(*(prop_value->mutable_data()), dataName.appendNumber(prop_value->id()), 10000);
+  }
 }
 
 void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
@@ -257,6 +318,26 @@ void Commo::consume(ndn::Name& name) {
                          bind(&Commo::onNack, this,  _1, _2),
                          bind(&Commo::onTimeout, this, _1, 0));
 //  std::cerr << "Finish Sending I: " << interest << std::endl;
+}
+
+void Commo::onDataLog(const ndn::Interest& interest, const ndn::Data& data) {
+
+  ndn::Name dataName(data.getName());
+//  std::cout << "Consumer onDataLog interest Name" << interest.getName() << std::endl;
+//  std::cout << "Consumer onDataLog data Name" << data.getName() << std::endl;
+  slot_id_t slot_id = dataName.get(-2).toNumber();
+  value_id_t value_id = dataName.get(-1).toNumber();
+  const uint8_t* value = data.getContent().value();
+  size_t size = data.getContent().value_size();
+  std::string value_str(value, value + size);
+  PropValue *prop_value = new PropValue(); 
+  prop_value->set_data(value_str);
+  prop_value->set_id(value_id);
+//  pool_->schedule(boost::bind(&Commo::deal_msg, this, value_str, dataName));
+  captain_->add_chosen_value(slot_id, prop_value);
+
+  // carry on consuming
+  consume_log_next();
 }
 
 void Commo::onData(const ndn::Interest& interest, const ndn::Data& data) {

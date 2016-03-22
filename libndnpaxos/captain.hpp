@@ -174,6 +174,8 @@ class Captain {
 
   std::vector<PropValue *> get_chosen_values();
 
+  PropValue *get_chosen_value(slot_id_t);
+
   bool if_recommit();
 
   void add_callback();
