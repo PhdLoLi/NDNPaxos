@@ -188,11 +188,11 @@ int main(int argc, char** argv) {
 
   int interval = 3;
 
-  for (int i = 0; i < interval; i++) {
-    printf("Counting %d\n", i + 1);
-    sleep(1);
-  }
-  printf("%d s passed start punching\n", interval);
+//  for (int i = 0; i < interval; i++) {
+//    printf("Counting %d\n", i + 1);
+//    sleep(1);
+//  }
+//  printf("%d s passed start punching\n", interval);
 
   for (int i = 0; i < to_node_range; i++) {
     consumers[i]->punch();

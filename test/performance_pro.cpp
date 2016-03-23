@@ -42,7 +42,7 @@ class Producer {
     }
     printf("%d s passed start punching\n", warming + interval);
     int punch = 1;
-    for (int i = 0; i < interval * 4; i++) {
+    for (int i = 0; i < interval * 4 * 10; i++) {
       sleep(punch);
       printf("PUNCH! %d\n", i + 1);
     }
