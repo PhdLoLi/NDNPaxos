@@ -593,7 +593,6 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           LOG_DEBUG_CAP("%sNodeID:%u Successfully Choose (value):%s ! (slot_id):%llu %s", 
                         BAK_MAG, view_->whoami(), chosen_value->data().c_str(), slot_id, NRM);
 
-          proposers_.erase(slot_id);
 
           proposers_mutex_.unlock();
 
@@ -613,6 +612,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
           proposers_mutex_.lock();
 
+          proposers_.erase(slot_id);
           if (chosen_value->id() == init_value->id()) {
 
             // start committing a new value from queue
