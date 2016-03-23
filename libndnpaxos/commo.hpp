@@ -24,6 +24,7 @@ class Commo {
   Commo(Captain *captain, View &view, int role);
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
+  void send_one_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t);
   void send_one_msg(google::protobuf::Message *, MsgType, node_id_t, ndn::Name& dataName);
   void produce_log(slot_id_t, PropValue *);

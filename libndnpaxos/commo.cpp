@@ -59,7 +59,7 @@ Commo::Commo(Captain *captain, View &view, int role)
 #endif
   boost::thread listen(boost::bind(&Commo::start, this));
   if (view_->nodes_size() == 1) {
-    pool_ = new pool(2);
+    pool_ = new pool(1);
   }
 //  std::cout << "win_size_ " << captain_->win_size() << std::endl;
 //  win_pool_ = new pool(captain_->win_size());
@@ -139,6 +139,11 @@ void Commo::produce(std::string &content, ndn::Name& dataName, int seconds) {
   // Return Data packet to the requester
 //  std::cout << ">>Producer D: " << *data << std::endl;
   face_->put(*data);
+}
+
+void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type) {
+//  pool_->schedule(boost::bind(&Commo::handle_myself, this, msg, msg_type));
+  captain_->handle_msg(msg, msg_type);
 }
 
 void Commo::send_one_msg(google::protobuf::Message *msg, MsgType msg_type, node_id_t node_id) {

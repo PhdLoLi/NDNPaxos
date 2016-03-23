@@ -398,7 +398,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
       acceptors_mutex_.unlock();
 
       if (msg_pre->msg_header().node_id() == view_->whoami())
-        handle_msg(msg_ack_pre, PROMISE);
+//        handle_msg(msg_ack_pre, PROMISE);
+        commo_->send_one_msg(msg_ack_pre, PROMISE);
       else // receiver should reply to PROMISE
         commo_->send_one_msg(msg_ack_pre, PROMISE, msg_pre->msg_header().node_id(), dataName);
 
@@ -455,9 +456,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
             MsgAccept *msg_acc = msg_accs[i];
             msg_acc->mutable_msg_header()->set_slot_id(slot_id);
   
-//            if (i == view_->whoami()) 
-//              handle_msg(msg_acc, ACCEPT);
-//            else // like broadcast should set ACCEPT as send[i]
+            if (i == view_->whoami()) 
+              handle_msg(msg_acc, ACCEPT);
+            else // like broadcast should set ACCEPT as send[i]
               commo_->send_one_msg(msg_acc, ACCEPT, i);
          }
 #else
@@ -510,7 +511,8 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
       acceptors_mutex_.unlock();
 
       if (msg_acc->msg_header().node_id() == view_->whoami())
-        handle_msg(msg_ack_acc, ACCEPTED);
+//        handle_msg(msg_ack_acc, ACCEPTED);
+        commo_->send_one_msg(msg_ack_acc, ACCEPTED);
       else { 
 #if MODE_TYPE == 2 
         if (msg_acc->has_last_slot()) {
