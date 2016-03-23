@@ -59,7 +59,7 @@ Commo::Commo(Captain *captain, View &view, int role)
 #endif
   boost::thread listen(boost::bind(&Commo::start, this));
   if (view_->nodes_size() == 1) {
-    pool_ = new pool(1);
+    pool_ = new pool(2);
   }
 //  std::cout << "win_size_ " << captain_->win_size() << std::endl;
 //  win_pool_ = new pool(captain_->win_size());
