@@ -29,7 +29,7 @@ class Master {
   Master(node_id_t my_id, int node_num, int value_size, int win_size, int local) 
     : my_id_(my_id), node_num_(node_num), 
       value_size_(value_size), win_size_(win_size),
-      commit_counter_(0), thr_counter_(0), starts_(2000000),
+      commit_counter_(0), thr_counter_(0), starts_(20000000),
       recording_(false), done_(false), local_(local) {
 
 //    std::string config_file = "/Users/lijing/NDNPaxos/config/localhost-" + to_string(node_num_) + ".yaml";
