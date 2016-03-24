@@ -198,7 +198,7 @@ int main(int argc, char** argv) {
     consumers[i]->punch();
   }
 
-  for (int j = 0; j < interval * 4; j++) {
+  for (int j = 0; j < interval * 4 * 10; j++) {
     printf("Time %d\n", j + 1);
     for (int i = 0; i < to_node_range; i++) {
       consumers[i]->before();
