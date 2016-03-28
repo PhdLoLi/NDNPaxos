@@ -658,6 +658,16 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
             
               proposers_mutex_.unlock();
               LOG_TRACE_CAP("after finish one, commit from queue, broadcast it");
+
+              max_chosen_mutex_.lock();
+              if (max_chosen_ > last_slot_ && chosen_values_[last_slot_ + 1]) {
+                last_slot_++;
+                msg_acc->set_last_slot(last_slot_);
+                value_id_t last_value = chosen_values_[last_slot_]->id();
+                msg_acc->set_last_value(last_value);
+              }
+              max_chosen_mutex_.unlock();
+
               commo_->broadcast_msg(msg_acc, ACCEPT);
 #else
               MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
