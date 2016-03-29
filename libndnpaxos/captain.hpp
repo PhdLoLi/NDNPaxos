@@ -22,11 +22,13 @@ namespace ndnpaxos {
 struct proposer_info_t {
 
   int try_time;
+  ndn::Name client_name;
   Proposer *curr_proposer;
   ProposerStatus proposer_status;
+  
 
-  proposer_info_t(int times) 
-    : try_time(times), curr_proposer(NULL), proposer_status(EMPTY) {
+  proposer_info_t(int times, ndn::Name &clientName) 
+    : try_time(times), client_name(clientName), curr_proposer(NULL), proposer_status(EMPTY) {
   };
 };
 
@@ -57,17 +59,12 @@ class Captain {
   /**
    * warpper of commit_value and master lease 
    */
-  void commit(std::string&);
+  void commit(std::string&, ndn::Name& dataName = dumName_);
 
   /**
    * warpper of commit_value and master lease 
    */
-  void commit(PropValue *);
-
-  /** 
-   * client commits one value to captain
-   */
-  void commit_value(std::string&);
+  void commit(PropValue *, ndn::Name& dataName = dumName_);
 
   /** 
   * client commits recover value to captain
@@ -193,6 +190,7 @@ class Captain {
   std::map<slot_id_t, proposer_info_t *> proposers_;
   std::vector<PropValue *> chosen_values_;
   std::queue<PropValue *> tocommit_values_;
+  std::queue<ndn::Name> tocommit_clients_;
 
   // max chosen instance/slot id 
   slot_id_t max_chosen_; 

@@ -115,7 +115,7 @@ void Captain::master_change(PropValue* prop_value) {
   }
 }
 
-void Captain::commit(std::string& data) {
+void Captain::commit(std::string& data, ndn::Name& dataName) {
 
   PropValue *prop_value = new PropValue();
   prop_value->set_data(data);
@@ -127,7 +127,7 @@ void Captain::commit(std::string& data) {
 
 
   if (view_->if_master()) {
-    commit(prop_value);
+    commit(prop_value, dataName);
   } else {
 
     MsgCommit *msg_com = msg_commit(prop_value);
@@ -141,7 +141,7 @@ void Captain::commit(std::string& data) {
   LOG_DEBUG_CAP("commit over!!!");
 }
 
-void Captain::commit(PropValue* prop_value) {
+void Captain::commit(PropValue* prop_value, ndn::Name &dataName) {
 
   LOG_DEBUG_CAP("<commit_value> Start");
 
@@ -158,20 +158,24 @@ void Captain::commit(PropValue* prop_value) {
 
   if (proposers_.size() == window_size_) {
     tocommit_values_.push(prop_value);
+    tocommit_clients_.push(dataName);
 
     proposers_mutex_.unlock();
-    LOG_DEBUG_CAP("push into tocommit_values queue");
+    LOG_DEBUG_CAP("push into tocommit_values & tocommit_clients queue");
     return;
   } 
   
   // if there exits at least one proposer unactive, but queue has uncommitted values, commit from queue first
   if (tocommit_values_.size() > 0) {
     tocommit_values_.push(prop_value);
+    tocommit_clients_.push(dataName);
     prop_value = tocommit_values_.front();
+    dataName = tocommit_clients_.front();
     tocommit_values_.pop();
+    tocommit_clients_.pop();
   }
 
-  proposer_info_t *prop_info = new proposer_info_t(1);
+  proposer_info_t *prop_info = new proposer_info_t(1, dataName);
   prop_info->curr_proposer = new Proposer(*view_, *prop_value); 
 
   max_slot_++;
@@ -205,154 +209,6 @@ void Captain::commit(PropValue* prop_value) {
   commo_->broadcast_msg(msg_pre, PREPARE);
 #endif
 
-}
-
-/** 
- * client commits one value to captain
- */
-void Captain::commit_value(std::string& data) {
-
-  LOG_DEBUG_CAP("<commit_value> Start");
-  LOG_DEBUG_CAP("(proposers_.size):%lu content:", proposers_.size());
-  for (std::map<slot_id_t, proposer_info_t *>::iterator it = proposers_.begin(); it != proposers_.end(); it++) {
-    LOG_DEBUG_CAP("slot_id %llu", it->first);
-  }
-
-  if (proposers_.size() > window_size_) {
-    LOG_INFO_CAP("Error Occur!!!! proposers_.size() %llu > window_size! %llu", proposers_.size(), window_size_);
-    return;
-  }
-
-  PropValue *prop_value = new PropValue();
-  prop_value->set_data(data);
-  value_id_mutex_.lock();
-  value_id_ += (1 << 16);
-  prop_value->set_id(value_id_);
-  value_id_mutex_.unlock();
-
-  // if all proposers are active, push commit value into waiting queue(tocommit_values)
-
-  proposers_mutex_.lock();
-
-  if (proposers_.size() == window_size_) {
-//    tocommit_values_mutex_.lock();
-    tocommit_values_.push(prop_value);
-//    tocommit_values_mutex_.unlock();
-
-    proposers_mutex_.unlock();
-    return;
-  } 
-  
-//  tocommit_values_mutex_.lock();
-  // if there exits at least one proposer unactive, but queue has uncommitted values, commit from queue first
-  if (tocommit_values_.size() > 0) {
-    tocommit_values_.push(prop_value);
-    prop_value = tocommit_values_.front();
-    tocommit_values_.pop();
-  }
-//  tocommit_values_mutex_.unlock();
-
-  proposer_info_t *prop_info = new proposer_info_t(1);
-  prop_info->curr_proposer = new Proposer(*view_, *prop_value); 
-
-
-  max_slot_++;
-  proposers_[max_slot_] = prop_info;
-#if MODE_TYPE == 2 
-  proposers_[max_slot_]->curr_proposer->gen_next_ballot();
-  proposers_[max_slot_]->curr_proposer->init_curr_value();
-  MsgAccept *msg_acc = proposers_[max_slot_]->curr_proposer->msg_accept();
-  msg_acc->mutable_msg_header()->set_slot_id(max_slot_);
-  proposers_[max_slot_]->proposer_status = PHASEII;
-
-  proposers_mutex_.unlock();
-
-  max_chosen_mutex_.lock();
-  if (max_chosen_ > last_slot_) {
-    last_slot_++;
-    msg_acc->set_last_slot(last_slot_);
-    value_id_t last_value = chosen_values_[last_slot_]->id();
-    msg_acc->set_last_value(last_value);
-  }
-  max_chosen_mutex_.unlock();
-
-  commo_->broadcast_msg(msg_acc, ACCEPT);
-#else
-  MsgPrepare *msg_pre = proposers_[max_slot_]->curr_proposer->msg_prepare();
-  proposers_[max_slot_]->proposer_status = INIT;
-  msg_pre->mutable_msg_header()->set_slot_id(max_slot_);
-
-  proposers_mutex_.unlock();
-  commo_->broadcast_msg(msg_pre, PREPARE);
-#endif
-
-//  new_slot(prop_value, 0);
-}
-
-/**
- * captain starts phaseI
- */
-void Captain::new_slot(PropValue *prop_value, int try_time) {
-
-  proposer_info_t *prop_info = new proposer_info_t(try_time);
-  prop_info->curr_proposer = new Proposer(*view_, *prop_value); 
-
-  proposers_mutex_.lock();
-
-  max_slot_++;
-  slot_id_t slot_id = max_slot_;
-
-  proposers_[slot_id] = prop_info;
-  MsgPrepare *msg_pre = proposers_[slot_id]->curr_proposer->msg_prepare();
-  // mark as INIT
-  proposers_[slot_id]->proposer_status = INIT;
-
-  proposers_mutex_.unlock();
-
-  // always captain set slot_id for msg
-  msg_pre->mutable_msg_header()->set_slot_id(slot_id);
-
-  commo_->broadcast_msg(msg_pre, PREPARE);
-}
-
-/**
- * captain starts phaseI
- */
-void Captain::new_slot(PropValue *prop_value, int try_time, slot_id_t old_slot) {
-  // new proposer
-//  work_mutex_.lock();
-//  if (work_ == false) {
-//    LOG_DEBUG_CAP("%snew_slot I'm DEAD --NodeID %u of new_slot", BAK_RED, view_->whoami());
-//    work_mutex_.unlock();
-//    return;
-//  }
-//  work_mutex_.unlock();
-
-  LOG_TRACE_CAP("<new_slot> Start");
-
-  proposer_info_t *prop_info = new proposer_info_t(try_time);
-  prop_info->curr_proposer = new Proposer(*view_, *prop_value); 
-
-  proposers_mutex_.lock();
-
-  proposers_.erase(old_slot);
-
-  max_slot_++;
-  slot_id_t slot_id = max_slot_;
-
-  proposers_[slot_id] = prop_info;
-  MsgPrepare *msg_pre = proposers_[slot_id]->curr_proposer->msg_prepare();
-  // mark as INIT
-  proposers_[slot_id]->proposer_status = INIT;
-
-  proposers_mutex_.unlock();
-
-  // always captain set slot_id for msg
-  msg_pre->mutable_msg_header()->set_slot_id(slot_id);
-
-  LOG_TRACE_CAP("<new_slot> call <broadcast_msg> with (msg_type):PREPARE");
-  commo_->broadcast_msg(msg_pre, PREPARE);
-  LOG_TRACE_CAP("<new_slot> call <broadcast_msg> Over");
 }
 
 /**
@@ -597,6 +453,9 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
           proposers_mutex_.unlock();
 
           if (chosen_value->id() == init_value->id()) {
+            LOG_DEBUG_CAP("inform client %s chosen!", chosen_value->data().c_str());
+//            std::cout << "dataName " << proposers_[slot_id]->client_name << std::endl;
+            commo_->inform_client(slot_id, try_time, proposers_[slot_id]->client_name);
             if (callback_latency_) {
               callback_latency_(slot_id, *chosen_value, try_time);
             }
@@ -634,9 +493,11 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
               PropValue *prop_value = tocommit_values_.front();
               tocommit_values_.pop();            
+              ndn::Name dataName = tocommit_clients_.front();
+              tocommit_clients_.pop();
 //              tocommit_values_mutex_.unlock();
   
-              proposer_info_t *prop_info = new proposer_info_t(1);
+              proposer_info_t *prop_info = new proposer_info_t(1, dataName);
               prop_info->curr_proposer = new Proposer(*view_, *prop_value); 
             
               max_slot_++;
@@ -690,7 +551,7 @@ void Captain::handle_msg(google::protobuf::Message *msg, MsgType msg_type, ndn::
 
             try_time++;
 
-            proposer_info_t *prop_info = new proposer_info_t(try_time);
+            proposer_info_t *prop_info = new proposer_info_t(try_time, dataName);
             prop_info->curr_proposer = new Proposer(*view_, *init_value); 
           
             max_slot_++;

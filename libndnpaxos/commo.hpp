@@ -21,7 +21,7 @@ class View;
 class Captain;
 class Commo {
  public:
-  Commo(Captain *captain, View &view, int role);
+  Commo(Captain *captain, View &view, int role = 0);
   ~Commo();
   void broadcast_msg(google::protobuf::Message *, MsgType);
   void send_one_msg(google::protobuf::Message *, MsgType);
@@ -34,11 +34,14 @@ class Commo {
   void start();
   void stop();
   ndn::shared_ptr<ndn::Face> getFace();
+  void inform_client(slot_id_t slot_id, int try_time, ndn::Name &dataName);
+
 
  private:
   // for producer part
   void onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest);
   void onInterestLog(const ndn::InterestFilter& filter, const ndn::Interest& interest);
+  void onInterestCommit(const ndn::InterestFilter& filter, const ndn::Interest& interest);
   void onRegisterSucceed(const ndn::InterestFilter& filter);
   void onRegisterFailed(const ndn::Name& prefix, const std::string& reason);
   void produce(std::string &str, ndn::Name&, int seconds = 0);
@@ -67,6 +70,7 @@ class Commo {
   std::vector<ndn::Name> consumer_names_;
   ndn::KeyChain keyChain_;
   ndn::Name log_name_;
+  ndn::Name commit_name_;
 
   bool reg_ok_;
 

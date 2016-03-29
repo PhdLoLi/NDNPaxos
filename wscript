@@ -64,6 +64,7 @@ def build(bld):
                                         'libndnpaxos/proposer.cpp', 'libndnpaxos/acceptor.cpp', 
                                         'libndnpaxos/captain.cpp', 'libndnpaxos/commo.cpp', 
                                         'libndnpaxos/producer.cpp', 'libndnpaxos/consumer.cpp',
+                                        'libndnpaxos/client.cpp',
                                         'libndnpaxos/dbmanager.cpp',
                                         'libndnpaxos/*.proto',
                                         'libzfec/fec.cc']), 

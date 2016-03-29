@@ -13,7 +13,8 @@
 namespace ndnpaxos {
 
 Commo::Commo(Captain *captain, View &view, int role) 
-  : captain_(captain), view_(&view), reg_ok_(false), log_name_(view_->prefix()), log_counter_(0) {
+  : captain_(captain), view_(&view), reg_ok_(false), 
+    log_name_(view_->prefix()), commit_name_(view_->prefix()), log_counter_(0) {
 
   face_ = ndn::make_shared<ndn::Face>();
 //  scheduler_ = ndn::unique_ptr<ndn::Scheduler>(new ndn::Scheduler(face_->getIoService()));
@@ -29,9 +30,17 @@ Commo::Commo(Captain *captain, View &view, int role)
 //    LOG_INFO_COM("Add consumer_names[%d]: %s", i, consumer_names_[i].toUri().c_str());
   }
   log_name_.append("log");
+  commit_name_.append("commit");
 
 #if MODE_TYPE >= 2
   if (view_->if_master()) {
+    ndn::Name write_name(commit_name_);
+    write_name.appendNumber(0);
+    LOG_INFO_COM("setInterestFilter for %s", write_name.toUri().c_str());
+    face_->setInterestFilter(write_name,
+                          bind(&Commo::onInterestCommit, this, _1, _2),
+                          bind(&Commo::onRegisterSucceed, this, _1),
+                          bind(&Commo::onRegisterFailed, this, _1, _2));
     // only register master for clients
   } else {
 
@@ -45,6 +54,17 @@ Commo::Commo(Captain *captain, View &view, int role)
                           bind(&Commo::onInterestLog, this, _1, _2),
                           bind(&Commo::onRegisterSucceed, this, _1),
                           bind(&Commo::onRegisterFailed, this, _1, _2));
+    if (!view_->if_quorum() || (view_->nodes_size() == 2)) {
+
+      // non-quorum servants need to serve reading requests
+      ndn::Name read_name(commit_name_);
+      read_name.appendNumber(1);
+      LOG_INFO_COM("setInterestFilter for %s", read_name.toUri().c_str());
+      face_->setInterestFilter(read_name,
+                            bind(&Commo::onInterestCommit, this, _1, _2),
+                            bind(&Commo::onRegisterSucceed, this, _1),
+                            bind(&Commo::onRegisterFailed, this, _1, _2));
+      }
     // none master node needs to register itself node_id and for committed value
   }
 
@@ -55,9 +75,15 @@ Commo::Commo(Captain *captain, View &view, int role)
                           bind(&Commo::onInterest, this, _1, _2),
                           bind(&Commo::onRegisterSucceed, this, _1),
                           bind(&Commo::onRegisterFailed, this, _1, _2));
+
+    LOG_INFO_COM("setInterestFilter for %s", commit_name_.toUri().c_str());
+    face_->setInterestFilter(commit_name_,
+                          bind(&Commo::onInterestCommit, this, _1, _2),
+                          bind(&Commo::onRegisterSucceed, this, _1),
+                          bind(&Commo::onRegisterFailed, this, _1, _2));
   }
 #endif
-  boost::thread listen(boost::bind(&Commo::start, this));
+//  boost::thread listen(boost::bind(&Commo::start, this));
   if (view_->nodes_size() == 1) {
     pool_ = new pool(1);
   }
@@ -218,6 +244,29 @@ void Commo::onInterestLog(const ndn::InterestFilter& filter, const ndn::Interest
   if (prop_value) {
     produce(*(prop_value->mutable_data()), dataName.appendNumber(prop_value->id()), 10000);
   }
+}
+
+void Commo::onInterestCommit(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
+  // interest format /prefix/commit/write_or_read(0 or 1,Number)/client_id(Number)/commit_counter(Number)/value_string
+  ndn::Name inName =  interest.getName();
+  std::string value = inName.get(-1).toUri();
+  int commit_counter = inName.get(-2).toNumber();
+  int client_id = inName.get(-3).toNumber();
+  int type = inName.get(-4).toNumber(); 
+  if (type == 0) // if write then put it into committing process
+    captain_->commit(value, inName);
+  else {
+    // read data and return the result directly
+    std::string data_value = "Need to change here";
+    produce(data_value, inName);
+  }
+}
+
+void Commo::inform_client(slot_id_t slot_id, int try_time, ndn::Name &dataName) {
+  ndn::Name new_name(dataName);
+  new_name.appendNumber(slot_id);
+  std::string data = std::to_string(try_time);
+  produce(data, new_name);
 }
 
 void Commo::onInterest(const ndn::InterestFilter& filter, const ndn::Interest& interest) {
