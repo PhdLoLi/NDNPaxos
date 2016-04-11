@@ -8,8 +8,8 @@
 
 namespace ndnpaxos {
 
-Client::Client(ndn::Name prefix, int commit_win) 
- : prefix_(prefix), com_win_(commit_win),
+Client::Client(ndn::Name prefix, int commit_win, int ratio) 
+ : prefix_(prefix), com_win_(commit_win), ratio_(ratio),
    commit_counter_(0), thr_counter_(0), starts_(20000000),
    recording_(false), done_(false) {
 
@@ -48,7 +48,10 @@ void Client::start_commit() {
     LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
     // interest format /prefix/commit/write_or_read(0 or 1,Number)/client_id(Number)/commit_counter(Number)/value_string
     ndn::Name new_name(prefix_);
-    new_name.appendNumber(0).appendNumber(i).appendNumber(commit_counter_).append(value);
+    int write_or_read = 0;
+    if (ratio_ == 100) {
+      new_name.appendNumber(write_or_read).appendNumber(i).appendNumber(commit_counter_).append(value);
+    }
 
     commit_counter_++;
     counter_mut_.unlock();

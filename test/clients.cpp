@@ -9,14 +9,15 @@ namespace ndnpaxos {
 
 int main(int argc, char** argv) {
 
-  if (argc < 2) {
-    std::cerr << "Usage:Window_Size " << std::endl;
+  if (argc < 3) {
+    std::cerr << "Usage:Commit_Win_Size Write_Ratio(100/90/10)" << std::endl;
     return 0;
   }
 
   ndn::Name prefix("/ndn/thu/naxos");
   int win_size = std::stoi(argv[1]);
-  Client client(prefix, win_size);
+  int ratio = std::stoi(argv[2]);
+  Client client(prefix, win_size, ratio);
   client.start_commit();
   return 0;
 }

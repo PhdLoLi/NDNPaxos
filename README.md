@@ -142,8 +142,8 @@ parameters (Node_ID Node_Num Win_Size Local_or_Not(0/1) Log_Win_Size)
 
 - Terminal 3  -- Clients (Runing for 20 mins)
 <pre>
-$ bin/clients 1
-parameters (Commit_Win_Size)
+$ bin/clients 1 100
+parameters (Commit_Win_Size Write_Ratio)
 </pre> 
 
 License
