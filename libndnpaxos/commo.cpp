@@ -35,7 +35,10 @@ Commo::Commo(Captain *captain, View &view, int role)
 #if MODE_TYPE >= 2
   if (view_->if_master()) {
     ndn::Name write_name(commit_name_);
-//    write_name.appendNumber(0);
+    if ((view_->nodes_size() > 1)) {
+      write_name.appendNumber(0);
+      // if there is only one node, then serve read and write
+    }
     LOG_INFO_COM("setInterestFilter for %s", write_name.toUri().c_str());
     face_->setInterestFilter(write_name,
                           bind(&Commo::onInterestCommit, this, _1, _2),

@@ -130,13 +130,13 @@ parameters (Node_ID Node_Num Wind_Size Local_or_Not(0/1) Log_Win_Size)
 
 - Terminal 1  -- Node1 (Runing background / Blocking)
 <pre>
-$ bin/naxos 0 3 1 0 1
+$ bin/naxos 1 3 1 0 1
 parameters (Node_ID Node_Num Win_Size Local_or_Not(0/1) Log_Win_Size)
 </pre>
 
 - Terminal 2  -- Node2 (Runing background / Blocking)
 <pre>
-$ bin/naxos 1 3 1 0 1
+$ bin/naxos 2 3 1 0 1
 parameters (Node_ID Node_Num Win_Size Local_or_Not(0/1) Log_Win_Size)
 </pre>
 
