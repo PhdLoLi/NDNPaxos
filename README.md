@@ -120,18 +120,31 @@ Background need run
 $ nfd-start
 </pre>
 
-- Terminal 1 -- Node1 
+If we have three nodes, we should run 3 naxos daemon processes or run them in different nodes: 
+
+- Terminal 0  -- Node0 (Runing background / Blocking)
 <pre>
-$ bin/servant 1 2
-parameters (Node_ID Node_Num)
+$ bin/naxos 0 3 1 0 1
+parameters (Node_ID Node_Num Wind_Size Local_or_Not(0/1) Log_Win_Size)
 </pre>
 
-- Terminal 0 -- Node0(Master) 
+- Terminal 1  -- Node1 (Runing background / Blocking)
 <pre>
-$ bin/master 0 2 1 1 0
-parameters (Node_ID Node_Num Value_Size Window_Size Local_orNot(0/1))
+$ bin/naxos 0 3 1 0 1
+parameters (Node_ID Node_Num Win_Size Local_or_Not(0/1) Log_Win_Size)
 </pre>
-When you are running locally, set the last parameter as 0. Now master and servant using timer to end itself, so please start them at the SAME time.
+
+- Terminal 2  -- Node2 (Runing background / Blocking)
+<pre>
+$ bin/naxos 1 3 1 0 1
+parameters (Node_ID Node_Num Win_Size Local_or_Not(0/1) Log_Win_Size)
+</pre>
+
+- Terminal 3  -- Clients (Runing for 20 mins)
+<pre>
+$ bin/clients 1
+parameters (Commit_Win_Size)
+</pre> 
 
 License
 ---
