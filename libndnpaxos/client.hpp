@@ -37,9 +37,12 @@ class Client {
   ndn::Name prefix_;
   int com_win_;
   int ratio_;
+  int write_or_read_;
+  
 
   slot_id_t commit_counter_;
   slot_id_t thr_counter_;
+  slot_id_t rand_counter_;
 
   boost::mutex counter_mut_;
   boost::mutex thr_mut_;

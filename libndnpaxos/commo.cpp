@@ -35,7 +35,7 @@ Commo::Commo(Captain *captain, View &view, int role)
 #if MODE_TYPE >= 2
   if (view_->if_master()) {
     ndn::Name write_name(commit_name_);
-    write_name.appendNumber(0);
+//    write_name.appendNumber(0);
     LOG_INFO_COM("setInterestFilter for %s", write_name.toUri().c_str());
     face_->setInterestFilter(write_name,
                           bind(&Commo::onInterestCommit, this, _1, _2),
@@ -257,6 +257,7 @@ void Commo::onInterestCommit(const ndn::InterestFilter& filter, const ndn::Inter
     captain_->commit(value, inName);
   else {
     // read data and return the result directly
+//    LOG_INFO("return read directly!");
     std::string data_value = "Need to change here";
     produce(data_value, inName);
   }

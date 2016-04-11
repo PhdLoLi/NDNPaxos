@@ -5,13 +5,16 @@
 
 
 #include "client.hpp"
+#include <cstdlib>
 
 namespace ndnpaxos {
 
 Client::Client(ndn::Name prefix, int commit_win, int ratio) 
  : prefix_(prefix), com_win_(commit_win), ratio_(ratio),
-   commit_counter_(0), thr_counter_(0), starts_(20000000),
+   commit_counter_(0), rand_counter_(0), thr_counter_(0), starts_(20000000),
    recording_(false), done_(false) {
+
+  write_or_read_ = ratio_ == 10 ? 1 : 0;
 
   prefix_.append("commit");
   face_ = ndn::make_shared<ndn::Face>();
@@ -41,6 +44,7 @@ void Client::start_commit() {
     sleep(1);
   }
 
+  
   for (int i = 0; i < com_win_; i++) {
     counter_mut_.lock();
     starts_[commit_counter_] = std::chrono::high_resolution_clock::now(); 
@@ -48,11 +52,23 @@ void Client::start_commit() {
     LOG_INFO(" +++++++++++ ZERO Init Commit Value: %s +++++++++++", value.c_str());
     // interest format /prefix/commit/write_or_read(0 or 1,Number)/client_id(Number)/commit_counter(Number)/value_string
     ndn::Name new_name(prefix_);
-    int write_or_read = 0;
-    if (ratio_ == 100) {
-      new_name.appendNumber(write_or_read).appendNumber(i).appendNumber(commit_counter_).append(value);
-    }
 
+    // random generate write or read num 0 ~ 9
+    if (ratio_ < 100) {
+      if (commit_counter_ % 10 == 0) {
+        rand_counter_ = commit_counter_ + (rand() % 10); 
+      }
+      if (commit_counter_ == rand_counter_) {
+        LOG_INFO("I 10per %d", commit_counter_);
+        new_name.appendNumber(1 - write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+      } else {
+        new_name.appendNumber(write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+        LOG_INFO("I 90per %d", commit_counter_);
+      }
+    } else {
+      new_name.appendNumber(write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+      LOG_INFO("I write %d", commit_counter_);
+    }
     commit_counter_++;
     counter_mut_.unlock();
 
@@ -186,13 +202,13 @@ void Client::onData(const ndn::Interest& interest, const ndn::Data& data) {
     const uint8_t* value = data.getContent().value();
     size_t size = data.getContent().value_size();
     std::string value_str(value, value + size);
-    int try_time = std::stoi(value_str);
+//    int try_time = std::stoi(value_str);
 //    std::cout << "try_time: " << try_time << std::endl; 
 
     auto finish = std::chrono::high_resolution_clock::now();
     periods_.push_back(std::chrono::duration_cast<std::chrono::microseconds>
                       (finish-starts_[commit_counter]).count());
-    trytimes_.push_back(try_time);
+//    trytimes_.push_back(try_time);
 //     LOG_INFO("periods_.size() : %d thr_counter_ : %d periods_[thr_counter_] :%llu \n", periods_.size(), thr_counter_, periods_[thr_counter_]);
     thr_counter_++;
   }
@@ -202,9 +218,27 @@ void Client::onData(const ndn::Interest& interest, const ndn::Data& data) {
     counter_mut_.lock();
     std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + "client_" + std::to_string(client_id);
 //    std::cout << "start commit : " << value << std::endl;
+
+    // random generate write or read num 0 ~ 9
+    ndn::Name new_name(prefix_);
+
+    if (ratio_ < 100) {
+      if (commit_counter_ % 10 == 0) {
+        rand_counter_ = commit_counter_ + (rand() % 10); 
+      }
+      if (commit_counter_ == rand_counter_) {
+        new_name.appendNumber(1 - write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+//        LOG_INFO("onData I 10per %d", commit_counter_);
+      } else {
+        new_name.appendNumber(write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+//        LOG_INFO("onData I 90per %d", commit_counter_);
+      }
+    } else {
+      new_name.appendNumber(write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+//      LOG_INFO("I write %d", commit_counter_);
+    }
+    
     starts_[commit_counter_] = std::chrono::high_resolution_clock::now();
-    ndn::Name new_name(interest.getName().getPrefix(-2));
-    new_name.appendNumber(commit_counter_).append(value);
     commit_counter_++;
     counter_mut_.unlock();
     consume(new_name);
