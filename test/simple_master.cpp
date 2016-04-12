@@ -26,9 +26,9 @@ using namespace std;
   
 class Master {
  public:
-  Master(node_id_t my_id, int node_num, int value_size, int win_size, int local) 
+  Master(node_id_t my_id, int node_num, int total, int win_size, int local) 
     : my_id_(my_id), node_num_(node_num), 
-      value_size_(value_size), win_size_(win_size),
+      total_(total), win_size_(win_size),
       commit_counter_(0), thr_counter_(0), 
       recording_(false), done_(false), local_(local) {
 
@@ -66,10 +66,11 @@ class Master {
   ~Master() {
   }
 
+  void start() {
+    commo_->start();
+  }
   void start_commit() {
     
-    int warming = 2;
-    int interval = 3;
 
     for (int i = 0; i < win_size_; i++) {
       counter_mut_.lock();
@@ -83,52 +84,7 @@ class Master {
 //      LOG_INFO("COMMIT DONE***********************************************************************");
     }
 
-    thr_mut_.lock();
-    recording_ = true;
-    thr_mut_.unlock();
-
-    uint64_t before = 0;
-    uint64_t throughput = 0;
-
-    for (int j = 0; j < interval * 4; j++) {
-      LOG_INFO("Time %d", j + 1);
-
-      thr_mut_.lock();
-      before = thr_counter_;
-      thr_mut_.unlock();
-
-      sleep(1);
-
-      thr_mut_.lock();
-      throughput = thr_counter_ - before; 
-
-      LOG_INFO("PUNCH! -- counter:%lu second:1 throughput:%lu", thr_counter_, throughput);
-
-      thr_mut_.unlock();
-      throughputs_.push_back(throughput);
-    }
-    
-    thr_mut_.lock();
-    recording_ = false;
-    done_ = true;
-    thr_mut_.unlock();
-
-    LOG_INFO("Last %d s period", interval);
-    for (int i = interval; i > 0; i--) {
-      LOG_INFO("Stop Committing Counting %d", i);
-      sleep(1);
-    }
-
-    commo_->stop();
-
-    LOG_INFO("Last Last %d s period", warming);
-    for (int i = warming ; i > 0; i--) {
-      LOG_INFO("Cooling Counting %d", i);
-      sleep(1);
-    }
-
-    LOG_INFO("Over!!!");
-  }
+ }
 
 
   void count_exe_latency(slot_id_t slot_id, PropValue& prop_value, node_id_t node_id) {
@@ -153,7 +109,7 @@ class Master {
     }
     thr_mut_.unlock();
 
-    if (done_ == false) {
+    if (commit_counter_ < total_) {
       counter_mut_.lock();
       std::string value = "Commiting Value Time_" + std::to_string(commit_counter_) + " from " + my_name_;
   //    std::cout << "Start commit +++++++++++ " << value << std::endl;
@@ -167,7 +123,7 @@ class Master {
   std::string my_name_;
   node_id_t my_id_;
   node_id_t node_num_;
-  int value_size_;
+  int total_;
   int win_size_;
   
   Captain *captain_;
@@ -203,19 +159,19 @@ int main(int argc, char** argv) {
  
 
   if (argc < 6) {
-    std::cerr << "Usage: Node_ID Node_Num Value_Size Window_Size Local_orNot(0/1)" << std::endl;
+    std::cerr << "Usage: Node_ID Node_Num Total_Num Window_Size Local_orNot(0/1)" << std::endl;
     return 0;
   }
 
   node_id_t my_id = stoul(argv[1]); 
   int node_num = stoi(argv[2]);
-  int value_size = stoi(argv[3]);
+  int total = stoi(argv[3]);
   int win_size = stoi(argv[4]);
   int local = stoi(argv[5]);
   
-  Master master(my_id, node_num, value_size, win_size, local);
+  Master master(my_id, node_num, total, win_size, local);
   master.start_commit();
-
+  master.start();
 
   return 0;
 }

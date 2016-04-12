@@ -94,10 +94,10 @@ class Servant {
     LOG_INFO("%d s passed start punching", warming + interval);
 
     // add for consume logs only needs for non-quorum
-    if (!view_->if_quorum()) {
-      LOG_INFO("Start Cosuming for Logs, becasue the node is not quorum");
-      commo_->consume_log(win_size_);
-    }
+//    if (!view_->if_quorum()) {
+//      LOG_INFO("Start Cosuming for Logs, becasue the node is not quorum");
+//      commo_->consume_log(win_size_);
+//    }
 
     int punch = 1;
 

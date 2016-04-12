@@ -48,10 +48,6 @@ class NaxosD {
   }
 
   void start() {
-    if (!view_->if_quorum()) {
-      LOG_INFO("Start Cosuming for Logs, becasue the node is not quorum");
-      commo_->consume_log(log_size_);
-    }
     commo_->start();
   }
 
