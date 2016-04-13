@@ -1,7 +1,7 @@
 NDNPaxos
 ----
 
-NDNPaxos is an implementation combining Paxos and NDN. It also inculdes some simple testing of functionality and performance.  
+NDNPaxos is an implementation combining Paxos and NDN(Basic/Quorum/Mulity). It mainly serves as the comparing with Naxos purpose.
 
 For license information see LICENSE.
 
