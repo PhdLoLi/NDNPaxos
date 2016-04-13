@@ -6,6 +6,7 @@
 
 #include "client.hpp"
 #include <cstdlib>
+#include <stdlib.h>
 
 namespace ndnpaxos {
 
@@ -17,6 +18,11 @@ Client::Client(ndn::Name prefix, int commit_win, int ratio)
   write_or_read_ = ratio_ == 10 ? 1 : 0;
 
   prefix_.append("commit");
+  std::string cmd = "nfdc register " + prefix.toUri() + " tcp://node0";
+  system(cmd.c_str());
+  
+  LOG_INFO("After Running %s", cmd.c_str());
+
   face_ = ndn::make_shared<ndn::Face>();
   boost::thread listen(boost::bind(&Client::attach, this));
 }
@@ -55,15 +61,21 @@ void Client::start_commit() {
 
     // random generate write or read num 0 ~ 9
     if (ratio_ < 100) {
-      if (commit_counter_ % 10 == 0) {
-        rand_counter_ = commit_counter_ + (rand() % 10); 
-      }
-      if (commit_counter_ == rand_counter_) {
-        LOG_INFO("I 10per %d", commit_counter_);
-        new_name.appendNumber(1 - write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+     if (ratio_ == 0) {
+        new_name.appendNumber(1).appendNumber(i).appendNumber(commit_counter_).append(value);
+        LOG_INFO("I read %d", commit_counter_);
       } else {
-        new_name.appendNumber(write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
-        LOG_INFO("I 90per %d", commit_counter_);
+
+        if (commit_counter_ % 10 == 0) {
+          rand_counter_ = commit_counter_ + (rand() % 10); 
+        }
+        if (commit_counter_ == rand_counter_) {
+          LOG_INFO("I 10per %d", commit_counter_);
+          new_name.appendNumber(1 - write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+        } else {
+          new_name.appendNumber(write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
+          LOG_INFO("I 90per %d", commit_counter_);
+        }
       }
     } else {
       new_name.appendNumber(write_or_read_).appendNumber(i).appendNumber(commit_counter_).append(value);
@@ -175,6 +187,7 @@ void Client::start_commit() {
 }
 
 void Client::consume(ndn::Name &name) {
+//  std::cout << "Sending " << name << std::endl;
   ndn::Interest interest(name);
   interest.setInterestLifetime(ndn::time::milliseconds(1000));
   interest.setMustBeFresh(true);
@@ -223,15 +236,22 @@ void Client::onData(const ndn::Interest& interest, const ndn::Data& data) {
     ndn::Name new_name(prefix_);
 
     if (ratio_ < 100) {
-      if (commit_counter_ % 10 == 0) {
-        rand_counter_ = commit_counter_ + (rand() % 10); 
-      }
-      if (commit_counter_ == rand_counter_) {
-        new_name.appendNumber(1 - write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
-//        LOG_INFO("onData I 10per %d", commit_counter_);
+      if (ratio_ == 0) {
+        new_name.appendNumber(1).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+//        LOG_INFO("onData I read 0per %d", commit_counter_);
       } else {
-        new_name.appendNumber(write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
-//        LOG_INFO("onData I 90per %d", commit_counter_);
+
+        if (commit_counter_ % 10 == 0) {
+          rand_counter_ = commit_counter_ + (rand() % 10); 
+        }
+        if (commit_counter_ == rand_counter_) {
+          new_name.appendNumber(1 - write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+  //        LOG_INFO("onData I 10per %d", commit_counter_);
+        } else {
+          new_name.appendNumber(write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);
+  //        LOG_INFO("onData I 90per %d", commit_counter_);
+        }
+
       }
     } else {
       new_name.appendNumber(write_or_read_).appendNumber(client_id).appendNumber(commit_counter_).append(value);

@@ -22,7 +22,7 @@ using namespace std;
 class NaxosD {
  public:
   NaxosD(node_id_t my_id, int node_num, int win_size, int local, int log_size) 
-    : my_id_(my_id), node_num_(node_num), win_size_(win_size), log_size_(log_size) {
+    : my_id_(my_id), node_num_(node_num), win_size_(win_size), local_(local), log_size_(log_size) {
 
     std::string tag;
     if (local_ == 0)

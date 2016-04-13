@@ -10,7 +10,7 @@ namespace ndnpaxos {
 int main(int argc, char** argv) {
 
   if (argc < 3) {
-    std::cerr << "Usage:Commit_Win_Size Write_Ratio(100/90/10)" << std::endl;
+    std::cerr << "Usage:Commit_Win_Size Write_Ratio(100/90/10/0)" << std::endl;
     return 0;
   }
 

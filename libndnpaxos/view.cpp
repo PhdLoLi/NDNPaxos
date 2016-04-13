@@ -32,6 +32,9 @@ View::View(node_id_t node_id, std::string cf)
   YAML::Node lease = config["lease"];
   YAML::Node db = config["db"];
 
+  size_ = nodes.size();
+  q_size_ = ceil((size_ + 1) / 2.0);
+
   for (std::size_t i = 0; i < nodes.size(); i++) {
 
 		YAML::Node node = nodes[i];
@@ -41,8 +44,13 @@ View::View(node_id_t node_id, std::string cf)
     // set a node in view
     std::string local_host("localhost");
     if (addr.compare(local_host) != 0) {
-      LOG_INFO("nfdc register %s/%s tcp://%s", 
-               prefix_.c_str(), name.c_str(), addr.c_str());
+
+      if ((node_id_ == 0) && (i > 0)) {
+        std::string cmd_node = "nfdc register " + prefix_ + "/" + name + " tcp://" + addr;
+        system(cmd_node.c_str());
+        LOG_INFO("After Running %s", cmd_node.c_str());
+      }
+
     } else {
       LOG_INFO("no need to nfdc register %s/%s tcp://localhost", 
                prefix_.c_str(), name.c_str());
@@ -52,8 +60,6 @@ View::View(node_id_t node_id, std::string cf)
     host_nodes_.push_back(host_info);
   }
     
-  size_ = host_nodes_.size();
-  q_size_ = ceil((size_ + 1) / 2.0);
 
   if (lease) {
     master_id_ = lease["master_id"].as<int>();
