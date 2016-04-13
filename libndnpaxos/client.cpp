@@ -18,7 +18,7 @@ Client::Client(ndn::Name prefix, int commit_win, int ratio)
   write_or_read_ = ratio_ == 10 ? 1 : 0;
 
   prefix_.append("commit");
-  std::string cmd = "nfdc register " + prefix.toUri() + " tcp://node0";
+  std::string cmd = "nfdc register " + prefix_.toUri() + " tcp://node0";
   system(cmd.c_str());
   
   LOG_INFO("After Running %s", cmd.c_str());
