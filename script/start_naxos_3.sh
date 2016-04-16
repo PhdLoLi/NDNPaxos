@@ -27,7 +27,7 @@ do
             done
         done
     done
-    cur_time=`date +"%m%d|%H:%M"`
+    cur_time=`date +"%m%d%H"`
     folder_name="${cur_time}""_3r_node0"
     cd /home/lijing/NDNPaxos/results/$program && mkdir $folder_name  && mv *.txt $folder_name
 done

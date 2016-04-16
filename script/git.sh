@@ -1,1 +1,1 @@
-cd /home/lijing/NDNPaxos && git stash && git pull && ./waf configure -l info && ./waf && cp bin/naxos basic && ./waf configure -l info -m Q && cp bin/naxos quorum && ./waf configure -l info -m M && ./waf && cp bin/naxos multi
+cd /home/lijing/NDNPaxos && git stash && git pull && ./waf configure -l info && ./waf clean && ./waf && mv bin/naxos basic && ./waf configure -l info -m Q && ./waf && mv bin/naxos quorum && ./waf configure -l info -m M && ./waf && mv bin/naxos multi

@@ -148,7 +148,6 @@ void Client::start_commit() {
   std::string thr_name;
   std::string lat_name;
   
-  LOG_INFO("Writing File Now!");
   #if MODE_TYPE == 3
   thr_name = "results/quorum/Q_t_" + std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
   lat_name = "results/quorum/Q_l_" + std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
@@ -159,6 +158,8 @@ void Client::start_commit() {
   thr_name = "results/basic/B_t_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
   lat_name = "results/basic/B_l_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
   #endif
+
+  LOG_INFO("Writing File Now! filename(tr): %s", thr_name.c_str());
 
   file_throughput_.open(thr_name);
 
