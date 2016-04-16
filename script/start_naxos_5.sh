@@ -21,7 +21,8 @@ do
     #        echo  $client_num 
     #        nohup ssh -t root@node7 "cd /home/lijing/naxos &&  bin/clients $client_num $write_ratio 3" &
 
-            cd /home/lijing/NDNPaxos &&  bin/clients $client_num $write_ratio   #run @node6      
+            p_clients="${program}""_clients"
+            cd /home/lijing/NDNPaxos &&  ./$p_clients $client_num $write_ratio   #run @node6      
 
             for k in $( seq 0 4 )
             do
@@ -29,7 +30,7 @@ do
             done
         done
     done
-    cur_time=`date +"%m%d|%H:%M"`
+    cur_time=`date +"%m%d%H"`
     folder_name="${cur_time}""_5r_node0"
     cd /home/lijing/NDNPaxos/results/$program && mkdir $folder_name  && mv *.txt $folder_name
 done

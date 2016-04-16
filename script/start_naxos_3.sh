@@ -19,7 +19,8 @@ do
             done
     #        echo  $client_num 
     #        ssh -t root@node4 "cd /home/lijing/naxos &&  bin/clients $client_num $write_ratio 2"
-            cd /home/lijing/NDNPaxos &&  bin/clients $client_num $write_ratio   #run @node6      
+            p_clients="${program}""_clients"
+            cd /home/lijing/NDNPaxos &&  ./$p_clients $client_num $write_ratio   #run @node6   
 
             for k in $( seq 0 2 )
             do

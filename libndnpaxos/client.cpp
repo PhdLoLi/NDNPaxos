@@ -15,7 +15,13 @@ Client::Client(ndn::Name prefix, int commit_win, int ratio)
  : prefix_(prefix), com_win_(commit_win), ratio_(ratio),
    commit_counter_(0), rand_counter_(0), thr_counter_(0), starts_(20000000),
    recording_(false), done_(false) {
-
+  #if MODE_TYPE == 3
+  LOG_INFO("Mode 3! Quorum!");
+  #elif MODE_TYPE == 2
+  LOG_INFO("Mode 2! Multi!");
+  #else
+  LOG_INFO("Mode NO! Basic!");
+  #endif
   LOG_INFO("Restart NFD and Sleep for 2 seconds");
   std::string nfd = "nfd-stop; nfd-start";
   system(nfd.c_str());
