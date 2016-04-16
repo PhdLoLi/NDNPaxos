@@ -21,8 +21,8 @@ using namespace std;
   
 class NaxosD {
  public:
-  NaxosD(node_id_t my_id, int node_num, int win_size, int local, int log_size) 
-    : my_id_(my_id), node_num_(node_num), win_size_(win_size), local_(local), log_size_(log_size) {
+  NaxosD(node_id_t my_id, int node_num, int win_size, int local) 
+    : my_id_(my_id), node_num_(node_num), win_size_(win_size), local_(local) {
 
     std::string tag;
     if (local_ == 0)
@@ -55,7 +55,6 @@ class NaxosD {
   node_id_t my_id_;
   node_id_t node_num_;
   int win_size_;
-  int log_size_;
 
   Captain *captain_;
   View *view_;
@@ -72,8 +71,8 @@ int main(int argc, char** argv) {
   signal(SIGINT, sig_int);
  
 
-  if (argc < 6) {
-    std::cerr << "Usage: Node_ID Node_Num Win_Size LocalorNot Log_Win_Size" << std::endl;
+  if (argc < 5) {
+    std::cerr << "Usage: Node_ID Node_Num Win_Size LocalorNot" << std::endl;
     return 0;
   }
 
@@ -81,9 +80,8 @@ int main(int argc, char** argv) {
   int node_num = stoi(argv[2]);
   int win_size = stoi(argv[3]);
   int local = stoi(argv[4]);
-  int log_size = stoi(argv[5]);
   
-  NaxosD naxos(my_id, node_num, win_size, local, log_size);
+  NaxosD naxos(my_id, node_num, win_size, local);
   naxos.start();
 
   return 0;

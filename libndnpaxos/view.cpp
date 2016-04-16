@@ -6,11 +6,17 @@
 #include "view.hpp"
 #include <boost/filesystem.hpp>
 #include <math.h>
+#include <stdlib.h>
 
 namespace ndnpaxos {
 
 View::View(node_id_t node_id, std::string cf) 
   : node_id_(node_id), master_id_(0), period_(500), length_(100000), db_name_("Lijing.db") {
+
+  LOG_INFO("Restart NFD and Sleep for 2 seconds");
+  std::string nfd = "nfd-stop; nfd-start";
+  system(nfd.c_str());
+  sleep(3);
 
   LOG_INFO("loading config file %s ...", cf.c_str());
 	

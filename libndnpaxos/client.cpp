@@ -7,6 +7,7 @@
 #include "client.hpp"
 #include <cstdlib>
 #include <stdlib.h>
+#include <stdlib.h>
 
 namespace ndnpaxos {
 
@@ -14,6 +15,11 @@ Client::Client(ndn::Name prefix, int commit_win, int ratio)
  : prefix_(prefix), com_win_(commit_win), ratio_(ratio),
    commit_counter_(0), rand_counter_(0), thr_counter_(0), starts_(20000000),
    recording_(false), done_(false) {
+
+  LOG_INFO("Restart NFD and Sleep for 2 seconds");
+  std::string nfd = "nfd-stop; nfd-start";
+  system(nfd.c_str());
+  sleep(2);
 
   write_or_read_ = ratio_ == 10 ? 1 : 0;
 
@@ -137,51 +143,40 @@ void Client::start_commit() {
     sleep(1);
   }
 
-//  std::ofstream file_throughput_;
-//  std::ofstream file_latency_;
-//  std::ofstream file_trytime_;
-//  std::string thr_name;
-//  std::string lat_name;
-//  std::string try_name;
-//  
-//  LOG_INFO("Writing File Now!");
-//  #if MODE_TYPE == 3
-//  thr_name = "results/ndnpaxos/Q_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  lat_name = "results/ndnpaxos/Q_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  try_name = "results/ndnpaxos/Q_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  #elif MODE_TYPE == 2
-//  thr_name = "results/ndnpaxos/M_t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  lat_name = "results/ndnpaxos/M_l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  try_name = "results/ndnpaxos/M_r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  #else
-//  thr_name = "results/ndnpaxos/t_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  lat_name = "results/ndnpaxos/l_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  try_name = "results/ndnpaxos/r_" + std::to_string(node_num_) + "_" + std::to_string(win_size_) + ".txt";
-//  #endif
-//
-//  file_throughput_.open(thr_name);
-//
-//  file_latency_.open(lat_name);
-//
-//  file_trytime_.open(try_name);
-//
-//  for (int i = 0; i < throughputs_.size(); i++) {
-//    file_throughput_ << throughputs_[i] << "\n";
-//  }
-//
-//  file_throughput_.close();
-//
-//  for (int j = 0; j < periods_.size(); j++) {
-//    file_latency_ << periods_[j] << "\n";
-//  }
-//  file_latency_.close();
-//
-//  for (int j = 0; j < trytimes_.size(); j++) {
-//    file_trytime_ << trytimes_[j] << "\n";
-//  }
-//  file_trytime_.close();
+  std::ofstream file_throughput_;
+  std::ofstream file_latency_;
+  std::string thr_name;
+  std::string lat_name;
+  
+  LOG_INFO("Writing File Now!");
+  #if MODE_TYPE == 3
+  thr_name = "results/quorum/Q_t_" + std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  lat_name = "results/quorum/Q_l_" + std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  #elif MODE_TYPE == 2
+  thr_name = "results/multi/M_t_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  lat_name = "results/multi/M_l_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  #else
+  thr_name = "results/basic/B_t_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  lat_name = "results/basic/B_l_" +  std::to_string(com_win_) + "_" + std::to_string(ratio_) + ".txt";
+  #endif
 
-//  LOG_INFO("Writing File Finished!");
+  file_throughput_.open(thr_name);
+
+  file_latency_.open(lat_name);
+
+
+  for (int i = 0; i < throughputs_.size(); i++) {
+    file_throughput_ << throughputs_[i] << "\n";
+  }
+
+  file_throughput_.close();
+
+  for (int j = 0; j < periods_.size(); j++) {
+    file_latency_ << periods_[j] << "\n";
+  }
+  file_latency_.close();
+
+  LOG_INFO("Writing File Finished!");
   stop();
   
 }
