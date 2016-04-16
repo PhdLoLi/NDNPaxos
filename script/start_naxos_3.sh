@@ -19,10 +19,7 @@ do
             done
     #        echo  $client_num 
     #        ssh -t root@node4 "cd /home/lijing/naxos &&  bin/clients $client_num $write_ratio 2"
-            cur_time=`date +"%m%d(%H:%M)"`
-            folder_name="${cur_time}""_5r_node0"
-
-            cd /home/lijing/NDNPaxos &&  bin/clients $client_num $write_ratio && cd results/$program && mkdir $folder_name && mv *.txt $folder_name   #run @node6      
+            cd /home/lijing/NDNPaxos &&  bin/clients $client_num $write_ratio   #run @node6      
 
             for k in $( seq 0 2 )
             do
@@ -30,4 +27,7 @@ do
             done
         done
     done
+    cur_time=`date +"%m%d|%H:%M"`
+    folder_name="${cur_time}""_3r_node0"
+    cd /home/lijing/NDNPaxos/results/$program && mkdir $folder_name  && mv *.txt $folder_name
 done
